@@ -166,13 +166,13 @@ details.tv summary{
 }
 details.tv summary:hover{color:var(--accent)}
 /* booktabs tables */
-.tablewrap{overflow-x:auto; margin:24px 0 6px}
+.tablewrap{overflow-x:auto; margin:24px 0 6px; max-width:660px}
 table{
-  border-collapse:collapse; font-family:var(--sans); font-size:13.5px;
-  line-height:1.5; min-width:420px;
+  border-collapse:collapse; font-family:var(--serif); font-size:14px; width:100%;
+  line-height:1.5;
   border-top:1.5px solid var(--ink); border-bottom:1.5px solid var(--ink);
 }
-th,td{padding:7px 14px; text-align:right; font-variant-numeric:tabular-nums; border:none}
+th,td{padding:7px 12px; text-align:right; font-variant-numeric:tabular-nums; border:none}
 thead th{border-bottom:1px solid var(--axis); color:var(--ink); font-weight:600}
 th:first-child, td:first-child{text-align:left; padding-left:2px}
 th:last-child, td:last-child{padding-right:2px}
@@ -254,7 +254,7 @@ footer.site .row a{color:var(--muted)}
 <h2 id="design">Benchmark design</h2>
 <p>A comparison like this is only informative if the problems are absent from training data; a memorized solution passes in every configuration and tells us nothing. The five problems were therefore generated with Claude Fable&nbsp;5 as <em>invented specifications</em>: semantics constructed to be novel, so that solving them requires reading the spec rather than recalling it. They include an expression language ("Calc-26") with a midpoint operator and a deliberately unconventional precedence rule, a sliding-window rate limiter with weighted refund-on-reject semantics, a recurrence expander evaluated against real 2026 daylight-saving transitions, a fully determined greedy DAG scheduler, and a cache module with five planted bugs to find and fix.</p>
 
-<div class="tablewrap wide">
+<div class="tablewrap">
 <table>
   <thead><tr><th>Problem</th><th style="text-align:left">Tests for</th><th style="text-align:left">Oracle</th></tr></thead>
   <tbody>
@@ -266,7 +266,7 @@ footer.site .row a{color:var(--muted)}
   </tbody>
 </table>
 </div>
-<p class="tabcaption wide"><span class="fignum">Table 1.</span>The five problems and their grading oracles.</p>
+<p class="tabcaption"><span class="fignum">Table 1.</span>The five problems and their grading oracles.</p>
 
 <p>Grading is by automated oracle, mostly differential testing against an independent reference implementation on randomized inputs, so a solution passes only by implementing the specified semantics. For p1 and p2 the repository ships <em>mutants</em> — plausible but subtly wrong solutions — and <code>harness/validate.py</code> confirms the oracles reject them. Without that check a pass rate is only as meaningful as the tests behind it.</p>
 <p>We test Opus 4-6, 4-7, and 4-8, and Sonnet 5, all with adaptive thinking at <code>effort=high</code> and default sampling parameters.<sup class="fn" id="fnref3"><a href="#fn3">3</a></sup> The raw-API lane uses five samples per model–problem pair (100 runs); the single-shot harness lane uses three (45 runs, Claude Code 2.1.201, subagents disabled); the agentic lane uses one (15 runs), each in an isolated temporary workspace. Harness context is counted as input plus cache-creation plus cache-read tokens summed over all turns, as reported by Claude Code, and the overhead ratio divides that by the raw call's input tokens.<sup class="fn" id="fnref1"><a href="#fn1">1</a></sup> Every result row and transcript is committed in the repository's <a href="https://github.com/igniting/harness-tax/tree/main/results"><code>results/</code></a> directory.</p>
@@ -276,7 +276,7 @@ footer.site .row a{color:var(--muted)}
 <h3>The raw baseline</h3>
 <p>Table 2 summarizes the raw-API lane. Two observations stand out. First, within the Opus line, single-shot accuracy on these problems declines monotonically across releases: 92% for 4-6, 80% for 4-7, 72% for 4-8. The failures concentrate on p2 and p3 — the two problems whose specifications most directly contradict convention — and we return to them in the discussion. Second, Sonnet 5, the least expensive model tested, solved all 25 of its runs. It generates roughly four times the output tokens of Opus (it thinks longer), but at 40% of the token price the runs cost about the same.</p>
 
-<div class="tablewrap wide">
+<div class="tablewrap">
 <table>
   <thead><tr><th>Model</th><th>pass@1</th><th>p1</th><th>p2</th><th>p3</th><th>p4</th><th>p5</th><th>Avg out tokens</th><th>Cost/solve</th></tr></thead>
   <tbody>
@@ -287,7 +287,7 @@ footer.site .row a{color:var(--muted)}
   </tbody>
 </table>
 </div>
-<p class="tabcaption wide"><span class="fignum">Table 2.</span>Raw-API baseline: one call per run, five samples per cell, effort=high. Output tokens include thinking.</p>
+<p class="tabcaption"><span class="fignum">Table 2.</span>Raw-API baseline: one call per run, five samples per cell, effort=high. Output tokens include thinking.</p>
 
 <h3>What the harness adds</h3>
 <p>Figure 1 shows pass@1 across the three configurations for the models that ran all three.<sup class="fn" id="fnref3b"><a href="#fn3">3</a></sup> The pattern is simple: the harness helps the model that was struggling and does nothing for the models that were not. Opus 4-8 moves from 72% to 100% under the single-shot harness — its raw failures on p2 and p3 disappear entirely. Opus 4-6 moves one point; Sonnet 5 was already at the ceiling.</p>
