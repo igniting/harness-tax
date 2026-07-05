@@ -4,8 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Harness Tax — measuring what agentic harnesses add, and what they cost</title>
-<meta name="description" content="A micro-benchmark comparing raw Anthropic API calls against Claude Code harness runs on five contamination-resistant coding problems: pass@1, context overhead, cost, and turns.">
+<meta name="description" content="We measure the same models on the same problems through raw API calls and through Claude Code, and report the harness's cost in context and dollars against its effect on pass@1.">
+<link rel="preload" href="fonts/source-serif-4-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+@font-face{
+  font-family:"Source Serif 4"; font-style:normal; font-weight:400; font-display:swap;
+  src:url("fonts/source-serif-4-latin-400-normal.woff2") format("woff2");
+}
+@font-face{
+  font-family:"Source Serif 4"; font-style:italic; font-weight:400; font-display:swap;
+  src:url("fonts/source-serif-4-latin-400-italic.woff2") format("woff2");
+}
+@font-face{
+  font-family:"Source Serif 4"; font-style:normal; font-weight:500; font-display:swap;
+  src:url("fonts/source-serif-4-latin-500-normal.woff2") format("woff2");
+}
+@font-face{
+  font-family:"Source Serif 4"; font-style:normal; font-weight:600; font-display:swap;
+  src:url("fonts/source-serif-4-latin-600-normal.woff2") format("woff2");
+}
+@font-face{
+  font-family:"Inter"; font-style:normal; font-weight:400; font-display:swap;
+  src:url("fonts/inter-latin-400-normal.woff2") format("woff2");
+}
+@font-face{
+  font-family:"Inter"; font-style:normal; font-weight:600; font-display:swap;
+  src:url("fonts/inter-latin-600-normal.woff2") format("woff2");
+}
 :root{
   --paper:#f9f6ef; --paper-2:#f1ecdf;
   --ink:#1f1c17; --ink-2:#5d5850; --muted:#8b8477;
@@ -19,8 +45,8 @@
   /* mode ramp (ordered: raw -> single-shot -> agentic), one blue hue */
   --mode1:#6da7ec; --mode2:#256abf; --mode3:#0d366b;
   --good:#006300;
-  --serif:Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Palatino,Georgia,Cambria,serif;
-  --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){
@@ -38,15 +64,13 @@
 html{scroll-behavior:smooth}
 body{
   margin:0; background:var(--paper); color:var(--ink);
-  font:18px/1.72 var(--serif);
+  font:17.5px/1.75 var(--serif);
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-}
-.smallcaps{
-  font-family:var(--sans); font-size:12px; letter-spacing:.14em;
-  text-transform:uppercase; color:var(--muted);
 }
 a{color:inherit; text-decoration:underline; text-decoration-color:var(--rule); text-underline-offset:3px; text-decoration-thickness:1px}
 a:hover{color:var(--accent); text-decoration-color:var(--accent)}
+sup.fn{font-family:var(--sans); font-size:11px; line-height:0}
+sup.fn a{text-decoration:none; color:var(--accent)}
 header.site{border-bottom:1px solid var(--rule)}
 header.site .row{
   max-width:880px; margin:0 auto; padding:18px 24px;
@@ -65,42 +89,29 @@ header.site nav a:hover{color:var(--accent)}
 main{max-width:880px; margin:0 auto; padding:0 24px 96px}
 article > *{max-width:660px}
 article > .wide{max-width:none}
-.hero{padding:72px 0 16px}
+.hero{padding:72px 0 12px}
 .hero h1{
-  font-size:clamp(34px,6vw,54px); line-height:1.12; font-weight:500;
-  letter-spacing:-.015em; margin:0 0 20px;
+  font-size:clamp(34px,6vw,52px); line-height:1.12; font-weight:500;
+  letter-spacing:-.015em; margin:0 0 22px;
 }
-.hero .dek{font-size:20px; line-height:1.6; color:var(--ink-2); margin:0 0 22px}
+.hero .dek{font-size:20px; line-height:1.65; color:var(--ink-2); margin:0 0 24px}
 .hero .meta{
   font-family:var(--sans); font-size:12px; letter-spacing:.14em;
   text-transform:uppercase; color:var(--muted);
 }
 .hero .meta a{color:var(--muted)}
-h2{font-size:29px; font-weight:500; line-height:1.25; letter-spacing:-.01em; margin:64px 0 14px}
-h3{font-size:20px; font-weight:600; line-height:1.35; margin:36px 0 8px}
+h2{font-size:28px; font-weight:500; line-height:1.25; letter-spacing:-.01em; margin:64px 0 14px}
+h3{font-size:19px; font-weight:600; line-height:1.4; margin:38px 0 8px}
 p, li{color:var(--ink)}
-li{margin:4px 0}
+li{margin:5px 0}
 .note{color:var(--ink-2); font-size:15.5px}
+em{font-style:italic}
 code{font:.78em/1.5 var(--mono); background:var(--paper-2); padding:1px 5px; border-radius:3px}
 pre{
   background:var(--paper-2); border:1px solid var(--rule); border-radius:4px;
   padding:16px 18px; overflow-x:auto;
 }
 pre code{background:none; padding:0; font-size:12.5px}
-/* headline figures */
-.tiles{
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:20px 28px; margin:36px 0 12px; padding:22px 0;
-  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
-}
-.tile .label{
-  font-family:var(--sans); font-size:11px; letter-spacing:.12em;
-  text-transform:uppercase; color:var(--muted); line-height:1.5;
-  min-height:33px; /* two label lines, so tile values baseline-align */
-}
-.tile .value{font-size:36px; font-weight:500; letter-spacing:-.01em; margin:6px 0 2px}
-.tile .sub{font-family:var(--sans); font-size:12.5px; color:var(--ink-2)}
-.tile .sub .up{color:var(--good); font-weight:600}
 /* figures */
 figure.chart{margin:40px 0; padding:0; position:relative}
 figure.chart figcaption{
@@ -142,7 +153,7 @@ details.tv summary{
 }
 details.tv summary:hover{color:var(--accent)}
 /* booktabs tables */
-.tablewrap{overflow-x:auto; margin:20px 0}
+.tablewrap{overflow-x:auto; margin:24px 0 6px}
 table{
   border-collapse:collapse; font-family:var(--sans); font-size:13.5px;
   line-height:1.5; min-width:420px;
@@ -155,10 +166,26 @@ th:last-child, td:last-child{padding-right:2px}
 td:first-child{color:var(--ink-2)}
 tr.hl td{font-weight:600; color:var(--ink)}
 tr.hl td:first-child{color:var(--ink)}
+.tabcaption{
+  font-family:var(--sans); font-size:13px; line-height:1.6; color:var(--ink-2);
+  margin:0 0 26px; max-width:660px;
+}
+.tabcaption .fignum{
+  font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  font-size:11px; color:var(--ink); margin-right:6px;
+}
 blockquote{
   margin:24px 0; padding:2px 0 2px 22px; border-left:2px solid var(--axis);
   color:var(--ink-2);
 }
+/* footnotes */
+.footnotes{
+  border-top:1px solid var(--rule); margin-top:56px; padding-top:18px;
+  font-size:15px; line-height:1.7; color:var(--ink-2);
+}
+.footnotes ol{padding-left:20px; margin:6px 0}
+.footnotes li{margin:10px 0}
+.footnotes .back{text-decoration:none; font-family:var(--sans); font-size:12px}
 footer.site{border-top:1px solid var(--rule); margin-top:48px}
 footer.site .row{
   max-width:880px; margin:0 auto; padding:26px 24px 56px;
@@ -174,9 +201,9 @@ footer.site .row a{color:var(--muted)}
   <div class="row">
     <span class="name">harness-tax</span>
     <nav>
-      <a href="#method">Method</a>
+      <a href="#design">Design</a>
       <a href="#results">Results</a>
-      <a href="#findings">Findings</a>
+      <a href="#discussion">Discussion</a>
       <a href="https://github.com/igniting/harness-tax">GitHub</a>
     </nav>
   </div>
@@ -187,51 +214,28 @@ footer.site .row a{color:var(--muted)}
 
 <div class="hero">
   <h1>The Harness Tax</h1>
-  <p class="dek">Wrapping a model in an agentic harness multiplies its context 40–125&times; and its per-run cost 5–8&times;. Sometimes that buys a 28-point jump in pass@1 — and sometimes it buys nothing. A micro-benchmark of raw API calls vs Claude&nbsp;Code on five contamination-resistant coding problems.</p>
+  <p class="dek">Production coding agents call language models through a harness — a system prompt, a catalog of tool schemas, a turn loop. We measure what that wrapper costs and what it buys. On five contamination-resistant problems, running the same models through Claude&nbsp;Code multiplied context 40–125&times; and per-run cost 5–8&times;; it lifted one model's pass@1 by 28 points and left already-strong models unchanged.</p>
   <p class="meta">July 2026 · Claude Code 2.1.201 · effort=high · <a href="https://github.com/igniting/harness-tax">code &amp; raw data</a></p>
 </div>
 
-<div class="tiles wide">
-  <div class="tile">
-    <div class="label">Context overhead, harness vs raw API</div>
-    <div class="value">38–125&times;</div>
-    <div class="sub">per problem; one runaway hit 1,037&times;</div>
-  </div>
-  <div class="tile">
-    <div class="label">pass@1 lift, Opus 4-8 raw &rarr; harness</div>
-    <div class="value">+28 pts</div>
-    <div class="sub"><span class="up">72% &rarr; 100%</span> single-shot</div>
-  </div>
-  <div class="tile">
-    <div class="label">pass@1 in agentic mode</div>
-    <div class="value">100%</div>
-    <div class="sub">every model, every problem</div>
-  </div>
-  <div class="tile">
-    <div class="label">Cost per run, harness vs raw</div>
-    <div class="value">5–8&times;</div>
-    <div class="sub">but cost <em>per solve</em> can drop</div>
-  </div>
-</div>
-
-<h2 id="intro">The question</h2>
-<p>Almost nobody calls a frontier model raw anymore. Production coding assistants wrap the model in a harness: a long system prompt, a catalog of tool schemas, a turn loop, permission machinery, prompt-cache churn. That wrapper is invisible in benchmark tables, which report the model, not the model-plus-harness.</p>
-<p>So we measured it directly. Same five problems, same models, same effort setting, three configurations:</p>
+<h2 id="intro">Introduction</h2>
+<p>Very little production inference reaches a model as a bare prompt. Coding assistants in particular wrap the model in a harness that supplies a long system prompt, tool definitions, permission machinery, and an execution loop, and the published numbers we use to choose between models — benchmark pass rates, price per token — describe the model alone. The wrapper's contribution, in either direction, is rarely measured.</p>
+<p>This post measures it directly. We run the same five problems, with the same models at the same effort setting, in three configurations:</p>
 <ul>
-  <li><strong>Raw API</strong> — one <code>messages.create</code> call, extract the code block, grade it.</li>
-  <li><strong>Harness, single-shot</strong> — Claude Code headless (<code>claude -p</code>), tools restricted to <code>Write</code>: write <code>solution.py</code> and stop. Isolates the <em>fixed</em> cost of the harness: system prompt, tool schemas, turn loop, cache accounting.</li>
-  <li><strong>Harness, agentic</strong> — full local toolset: the model can write scratch tests, run them, and iterate until it is confident. Isolates what iterate-and-self-verify buys, and costs.</li>
+  <li><em>Raw API.</em> A single <code>messages.create</code> call; we extract the code block from the response and grade it.</li>
+  <li><em>Harness, single-shot.</em> Claude Code in headless mode (<code>claude -p</code>) with tools restricted to <code>Write</code>: the model writes <code>solution.py</code> and stops. This isolates the fixed cost of the harness — system prompt, tool schemas, turn loop, cache traffic — with no self-verification.</li>
+  <li><em>Harness, agentic.</em> The full local toolset: the model may write scratch tests, run them, and revise until it is satisfied.</li>
 </ul>
-<p>The delta between the first two is the <strong>harness tax</strong> (tokens, dollars) and the <strong>harness lift</strong> (pass rate). The delta to the third is the price of self-verification.</p>
+<p>The difference between the first two configurations is what we call the <em>harness tax</em> (in tokens and dollars) and the <em>harness lift</em> (in pass rate). The difference between the second and third is the price and value of letting the model check its own work.</p>
 
-<h2 id="method">Method</h2>
-<h3>Contamination-resistant problems, generated with Fable 5</h3>
-<p>Public benchmark problems leak into training data, and a memorized solution tells you nothing about the harness. So the five problems here were <strong>generated with Claude Fable 5</strong> as <em>invented specifications</em> — deliberately novel semantics that don't exist in any codebase to memorize: a made-up expression language ("Calc-26") with a midpoint operator and non-standard unary-minus precedence, a rate limiter with weighted refund-on-reject semantics, a recurrence expander pinned to real 2026 DST transitions, a fully-determined greedy DAG scheduler, and a find-the-five-planted-bugs cache module.</p>
+<h2 id="design">Benchmark design</h2>
+<p>A comparison like this is only informative if the problems are absent from training data; a memorized solution passes in every configuration and tells us nothing. The five problems were therefore generated with Claude Fable&nbsp;5 as <em>invented specifications</em>: semantics constructed to be novel, so that solving them requires reading the spec rather than recalling it. They include an expression language ("Calc-26") with a midpoint operator and a deliberately unconventional precedence rule, a sliding-window rate limiter with weighted refund-on-reject semantics, a recurrence expander evaluated against real 2026 daylight-saving transitions, a fully determined greedy DAG scheduler, and a cache module with five planted bugs to find and fix.</p>
+
 <div class="tablewrap wide">
 <table>
   <thead><tr><th>Problem</th><th style="text-align:left">Tests for</th><th style="text-align:left">Oracle</th></tr></thead>
   <tbody>
-    <tr><td>p1_rate_limiter</td><td style="text-align:left">stateful invariants, boundary semantics</td><td style="text-align:left">differential vs brute-force reference on random streams</td></tr>
+    <tr><td>p1_rate_limiter</td><td style="text-align:left">stateful invariants, boundary semantics</td><td style="text-align:left">differential vs. brute-force reference on random streams</td></tr>
     <tr><td>p2_expr_parser</td><td style="text-align:left">precedence with a novel operator, adversarial spec quirk</td><td style="text-align:left">random-AST differential + pinned spec examples</td></tr>
     <tr><td>p3_recurrence</td><td style="text-align:left">DST gaps/overlaps, half-hour zones</td><td style="text-align:left">independent minute-scan around real 2026 transitions</td></tr>
     <tr><td>p4_scheduler</td><td style="text-align:left">deterministic multi-worker DAG simulation, tie-breaking</td><td style="text-align:left">independent unit-time-step simulator</td></tr>
@@ -239,22 +243,15 @@ footer.site .row a{color:var(--muted)}
   </tbody>
 </table>
 </div>
-<p>Grading is by automated oracle, not string match — mostly differential testing against an independent reference implementation on randomized inputs. For p1 and p2 the repo ships <em>mutants</em> (plausibly-wrong solutions), and <code>harness/validate.py</code> proves the oracles kill them. If the oracle can't catch a subtly wrong solution, the pass rate is noise; this check makes the pass rates mean something.</p>
+<p class="tabcaption wide"><span class="fignum">Table 1.</span>The five problems and their grading oracles.</p>
 
-<h3>Setup</h3>
-<ul>
-  <li><strong>Models:</strong> Opus 4-6, 4-7, 4-8 ($5/$25 per MTok) and Sonnet 5 ($2/$10 per MTok), all at <code>effort=high</code> with adaptive thinking; sampling params left at defaults.</li>
-  <li><strong>Raw API:</strong> 5 samples per model &times; problem (100 runs). Output tokens include thinking.</li>
-  <li><strong>Harness single-shot:</strong> Claude Code 2.1.201 headless, <code>--allowedTools Write</code>, subagents disabled, 3 samples per cell (45 runs).</li>
-  <li><strong>Harness agentic:</strong> full toolset in an isolated temp workspace, subagents disabled, 1 sample per cell (15 runs).</li>
-  <li><strong>Context accounting:</strong> harness context = input + cache-creation + cache-read tokens summed over all turns, as reported by Claude Code; cost is its reported <code>total_cost_usd</code>. The comparison ratio is harness context ÷ raw-API input tokens.</li>
-</ul>
-<p class="note">All numbers below come from the JSONL files in <a href="https://github.com/igniting/harness-tax/tree/main/results"><code>results/</code></a>; every transcript is in the repo.</p>
+<p>Grading is by automated oracle, mostly differential testing against an independent reference implementation on randomized inputs, so a solution passes only by implementing the specified semantics. For p1 and p2 the repository ships <em>mutants</em> — plausible but subtly wrong solutions — and <code>harness/validate.py</code> confirms the oracles reject them. Without that check a pass rate is only as meaningful as the tests behind it.</p>
+<p>We test Opus 4-6, 4-7, and 4-8, and Sonnet 5, all with adaptive thinking at <code>effort=high</code> and default sampling parameters.<sup class="fn" id="fnref3"><a href="#fn3">3</a></sup> The raw-API lane uses five samples per model–problem pair (100 runs); the single-shot harness lane uses three (45 runs, Claude Code 2.1.201, subagents disabled); the agentic lane uses one (15 runs), each in an isolated temporary workspace. Harness context is counted as input plus cache-creation plus cache-read tokens summed over all turns, as reported by Claude Code, and the overhead ratio divides that by the raw call's input tokens.<sup class="fn" id="fnref1"><a href="#fn1">1</a></sup> Every result row and transcript is committed in the repository's <a href="https://github.com/igniting/harness-tax/tree/main/results"><code>results/</code></a> directory.</p>
 
 <h2 id="results">Results</h2>
 
-<h3>Baseline: the raw API is cheap, and newer isn't better</h3>
-<p>One API call per problem, code block extracted and graded. Two things stand out. First, within the Opus line, raw single-shot pass@1 <em>fell</em> across releases on these novel specs: 92% (4-6) &rarr; 80% (4-7) &rarr; 72% (4-8). Second, Sonnet 5 — the cheapest model tested — went 25 for 25, spending ~4&times; the output tokens (it thinks longer) but still costing about the same per run.</p>
+<h3>The raw baseline</h3>
+<p>Table 2 summarizes the raw-API lane. Two observations stand out. First, within the Opus line, single-shot accuracy on these problems declines monotonically across releases: 92% for 4-6, 80% for 4-7, 72% for 4-8. The failures concentrate on p2 and p3 — the two problems whose specifications most directly contradict convention — and we return to them in the discussion. Second, Sonnet 5, the least expensive model tested, solved all 25 of its runs. It generates roughly four times the output tokens of Opus (it thinks longer), but at 40% of the token price the runs cost about the same.</p>
 
 <div class="tablewrap wide">
 <table>
@@ -267,10 +264,11 @@ footer.site .row a{color:var(--muted)}
   </tbody>
 </table>
 </div>
-<p>The failures cluster on p2 (the novel-precedence parser) and p3 (DST edge cases) — exactly the problems where an invented spec contradicts what training data suggests. More on that <a href="#priors">below</a>.</p>
+<p class="tabcaption wide"><span class="fignum">Table 2.</span>Raw-API baseline: one call per run, five samples per cell, effort=high. Output tokens include thinking.</p>
 
-<h3>The lift: what the harness buys</h3>
-<p>Now the same problems through Claude Code. Opus 4-7 was dropped from harness runs after its raw baseline; the three remaining models each ran raw, single-shot, and agentic.</p>
+<h3>What the harness adds</h3>
+<p>Figure 1 shows pass@1 across the three configurations for the models that ran all three.<sup class="fn" id="fnref3b"><a href="#fn3">3</a></sup> The pattern is simple: the harness helps the model that was struggling and does nothing for the models that were not. Opus 4-8 moves from 72% to 100% under the single-shot harness — its raw failures on p2 and p3 disappear entirely. Opus 4-6 moves one point; Sonnet 5 was already at the ceiling.</p>
+<p>What makes the 28-point jump notable is that the single-shot harness gives the model no new capability. It cannot run tests or observe outputs; the only change is the surrounding frame — the system prompt and the discipline of writing a file rather than composing a chat response. Whatever the mechanism, the frame alone was worth 28 points to this model. In the agentic configuration, where models may write and run scratch tests before committing, every model reaches 100%.</p>
 
 <figure class="chart wide" id="c-pass">
   <div class="legend">
@@ -292,11 +290,9 @@ footer.site .row a{color:var(--muted)}
   </details>
 </figure>
 
-<p>The pattern: <strong>the harness rescues models that struggle raw, and does nothing for models that don't.</strong> Opus 4-8 jumps 28 points to 100% from the single-shot harness alone — no iteration, no test-running, just the harness's system prompt and file-writing frame around the same model. Its raw failures on p2 (40%) and p3 (20%) vanish entirely. Opus 4-6 moves one point. Sonnet 5, already perfect, has nowhere to go.</p>
-<p>And in agentic mode — where the model can write scratch tests, run them, and fix what fails — <strong>everything converges to 100%</strong>.</p>
-
-<h3>The tax: what the harness costs</h3>
-<p>A raw call on these problems sends 400–1,000 input tokens. The same problem through the single-shot harness touches 36,000–71,000 context tokens per run — the system prompt, the tool catalog, and every turn's cache writes and reads, again and again across the loop.</p>
+<h3>What the harness costs</h3>
+<p>A raw call on these problems sends 400–1,000 input tokens. The same problem through the single-shot harness touches 36,000–71,000 context tokens per run: the system prompt and tool catalog are written to the prompt cache and then re-read on every turn of the loop. Figure 2 plots the ratio for each model and problem. The floor — roughly 36–46K tokens even on the smallest problem — is the fixed furniture; variation above it is extra turns compounding the cache reads.</p>
+<p>The isolated point at 1,037&times; deserves comment. Two of Sonnet 5's three single-shot runs on p3 disregarded the instruction to write the file and stop, continued for thirteen turns, and accumulated as much as 1.02 million context tokens — a $2.94 run for a problem the same model solves raw for five cents.<sup class="fn" id="fnref2"><a href="#fn2">2</a></sup> Both runs passed. This is the tax at its worst: the loop gives the model room to keep going, and the accounting bills every lap.</p>
 
 <figure class="chart wide" id="c-tax">
   <div class="legend">
@@ -320,10 +316,8 @@ footer.site .row a{color:var(--muted)}
   </details>
 </figure>
 
-<p>The floor — roughly 36–46K tokens even on the smallest problems — is the fixed furniture: system prompt plus tool schemas, re-read from cache on every turn. Variation above the floor is extra turns compounding the cache reads.</p>
-<p>The 1,037&times; point is real and worth dwelling on. Two of Sonnet 5's three single-shot runs on p3 ignored "write the file and stop," ran <strong>13 turns</strong>, and accumulated up to <strong>1,016,995 context tokens</strong> — a $2.94 run for a problem the same model solves raw for five cents. Both runs still passed. This is the harness tax at its worst: the loop gives the model room to spiral, and the cache accounting bills every lap.</p>
-
-<h3>Cost: per run vs per solve</h3>
+<h3>Cost per run and cost per solve</h3>
+<p>Figure 3 gives the dollar view. Per run, the harness costs five to eight times the raw call.<sup class="fn" id="fnref1b"><a href="#fn1">1</a></sup> Per <em>solved problem</em>, however, the comparison inverts for the model the harness helps. At a 72% pass rate, Opus 4-8's raw lane wastes more than a quarter of its calls, and each failure costs whatever a retry or a human debugging session costs downstream; through the harness, every $0.15 run lands. For Sonnet 5 the same spend purchases nothing — it was already at 100% for a twentieth of the price. In the agentic lane, where Sonnet 5 can satisfy itself by running a test instead of re-deriving everything in context, it becomes the cheapest model measured, at $0.198 per problem.</p>
 
 <figure class="chart wide" id="c-cost">
   <div class="legend">
@@ -332,7 +326,7 @@ footer.site .row a{color:var(--muted)}
     <span class="key"><span class="swatch" style="background:var(--mode3)"></span>Harness agentic</span>
   </div>
   <div data-chart="cost"></div>
-  <figcaption><span class="fignum">Figure 3.</span>Average cost per run, by model and configuration. Raw API is the model's list price on one call; harness cost is Claude Code's reported total.</figcaption>
+  <figcaption><span class="fignum">Figure 3.</span>Average cost per run, by model and configuration. Raw API is the model's list price on one call; harness cost is Claude Code's reported total. Sonnet 5's single-shot mean carries the two runaway p3 runs; its median single-shot run cost about $0.16.</figcaption>
   <details class="tv"><summary>Data table</summary>
     <div class="tablewrap"><table>
       <thead><tr><th>Model</th><th>Raw API</th><th>Single-shot</th><th>Agentic</th></tr></thead>
@@ -345,11 +339,8 @@ footer.site .row a{color:var(--muted)}
   </details>
 </figure>
 
-<p>Per run, the harness costs 5–8&times; the raw call. But per <em>solved problem</em>, the picture inverts for the model the harness helps: Opus 4-8 raw wastes 28% of its calls on failures ($0.042 per solve at 72%), while through the harness every $0.15 run lands. If a failure means a human retries or debugs, the harness is the cheaper path <em>for that model</em> — and pure overhead for Sonnet 5, which was already at 100% for a nickel.</p>
-<p class="note">Sonnet 5's single-shot average ($0.39) carries the two runaway p3 runs; its median single-shot run cost ~$0.16. In agentic mode, where it can satisfy itself by actually running a test instead of re-deriving everything in-context, it was the cheapest model at $0.198 per problem.</p>
-
-<h3>Agentic mode: reliability, not capability</h3>
-<p>Agentic mode is where the harness earns its keep differently: not by making the model smarter, but by letting it check. Every model reached 100%, taking 2–10 turns per problem.</p>
+<h3>The agentic lane</h3>
+<p>Agentic mode is where the harness earns its keep by a different mechanism: not a better frame, but the ability to check. Every model reached 100%, taking two to ten turns per problem (Figure 4). The ten-turn case — Opus 4-6 on the scheduler, whose tie-breaking rules must be matched exactly — shows the shape of agentic self-repair: write, test, find the tie-break wrong, fix, repeat, at a final cost of $0.44, fourteen times the raw call. On problems of this size, agentic mode is best understood as insurance: two to ten times the single-shot price, in exchange for a correctness guarantee that held across all fifteen runs.</p>
 
 <figure class="chart wide" id="c-turns">
   <div class="legend">
@@ -373,33 +364,26 @@ footer.site .row a{color:var(--muted)}
   </details>
 </figure>
 
-<p>Opus 4-6's 10-turn slog on p4 (the scheduler whose tie-breaking must match the spec exactly) is the shape of agentic self-repair: write, test, find the tie-break wrong, fix, repeat. It costs $0.44 — 14&times; the raw call — and it works. The right mental model is <strong>insurance</strong>: 2–10&times; the single-shot price for a correctness guarantee, worth it when a wrong answer is expensive, wasteful as a default.</p>
+<h2 id="discussion">Discussion</h2>
 
-<h2 id="findings">Findings</h2>
+<h3>The tax is a property of the model–task pair</h3>
+<p>Forty to a hundred and twenty-five times the context sounds indefensible, and for a model already passing, it is — pure cost with no return. For Opus 4-8 the same overhead purchased 28 points of pass@1. Neither "harnesses are bloat" nor "harnesses are worth it" survives contact with the data; the trade is specific to the model and the task, and the only way to know which side of it you are on is to measure, which is what this repository is for.</p>
 
-<h3>1. The tax is real, but it's not just overhead</h3>
-<p>40–125&times; context sounds damning, and for a model that was already passing, it is — pure cost, zero lift. But for Opus 4-8 the same overhead bought +28 points of pass@1. Whether the harness is worth it is a property of the <em>model &times; task</em>, not of the harness. Measure yours.</p>
+<h3>The lift comes from the frame, not the tools</h3>
+<p>Opus 4-8's improvement occurred in a configuration where the model could not execute anything. The mechanism is therefore in the prompt: the harness's system prompt and the file-writing task framing changed how the model engaged with the specification. This is a cheap and, we suspect, underused knob — before reaching for a full agentic loop and its costs, it is worth asking how much of the benefit the frame alone provides.</p>
 
-<h3>2. The harness lift comes from the frame, not the tools</h3>
-<p>Opus 4-8's jump to 100% happened in <em>single-shot</em> mode — the model couldn't run anything. The system prompt and the write-a-file framing alone changed how it read the spec. That's a cheap, underrated knob: before reaching for full agentic loops, try the frame.</p>
+<h3>Price and accuracy are separate axes</h3>
+<p>Sonnet 5, at two-fifths of Opus's token price, outscored every Opus release in the raw lane and was the cheapest route to 100% in the agentic lane. It spends its advantage in thinking tokens — about four times Opus's output — and the price difference absorbs that several times over. Choosing a model by price tier and assuming accuracy follows it would have produced the wrong answer here in both directions.</p>
 
-<h3>3. Cheaper models can beat expensive ones — pick by measured pass rate, not price tier</h3>
-<p>Sonnet 5, at 40% of Opus's token price, outscored every Opus release on raw calls (100% vs 72–92%) and was the cheapest route to 100% in agentic mode. It spends ~4&times; the output tokens thinking, and the price gap swallows that whole.</p>
+<h3>Novel specifications lose to training priors</h3>
+<p>The p2 expression language was constructed, by Fable&nbsp;5, to contain a rule with no precedent in training data: unary minus binds tighter than exponentiation, so</p>
+<blockquote><code>-2 ^ 2 = 4</code> under the specification, where nearly every programming language and mathematical convention gives <code>-2 ^ 2 = -4</code>.</blockquote>
+<p>In three of its five raw runs, Opus 4-8 read the specification and implemented the convention anyway; the oracle's pinned examples caught it each time. This is the cleanest failure signature in the benchmark: when a specification contradicts a strong prior, raw single-shot generation follows the prior. Both the harness frame and agentic self-testing corrected it — which suggests the remedy is not additional capability, but anything that forces a second reading.</p>
 
-<h3 id="priors">4. On novel specs, models default to their training priors</h3>
-<p>The p2 spec — invented by Fable 5 precisely to have no precedent — says unary minus binds <em>tighter</em> than exponentiation:</p>
-<blockquote><code>-2 ^ 2 = 4</code> &nbsp;(the spec) &nbsp;&nbsp;vs&nbsp;&nbsp; <code>-2 ^ 2 = -4</code> &nbsp;(Python, Ruby, math convention)</blockquote>
-<p>Opus 4-8 read the spec, then implemented the convention anyway — in 3 of 5 raw runs. The oracle's pinned spec examples caught it every time. This is the cleanest failure signature in the whole benchmark: when a specification contradicts a strong prior, raw single-shot generation follows the prior. Both the harness frame and agentic self-testing fixed it — which suggests the fix isn't more capability, it's anything that forces a second read.</p>
+<h2 id="limitations">Limitations</h2>
+<p>The usual cautions apply, and a few specific ones. The sample sizes are small — five problems, three to five samples per cell, one in the agentic lane — so differences of less than about ten points should not be taken seriously; this is a signal and a method, not a leaderboard. We measured one harness at one version (Claude Code 2.1.201, subagents disabled), and both the fixed cost and the frame will differ across harnesses and versions. Cost accounting differs by lane.<sup class="fn" id="fnref1c"><a href="#fn1">1</a></sup> Finally, contamination resistance forces the problems to be small, spec-dense, and self-contained — precisely the regime where a raw call is viable at all. On large-codebase tasks the raw lane does not exist, and the harness tax is simply the price of entry.</p>
 
-<h2 id="caveats">Caveats</h2>
-<ul>
-  <li><strong>Small n.</strong> 5 problems, 3–5 samples per cell (1 for agentic). Deltas under ~10 points are within noise; treat this as a signal and a method, not a leaderboard.</li>
-  <li><strong>One harness, one version.</strong> Claude Code 2.1.201, subagents disabled. Other harnesses (and other versions) will have different fixed costs and different frames.</li>
-  <li><strong>Cost accounting differs by lane.</strong> Raw cost is computed from list prices; harness cost is Claude Code's self-reported total, which includes cache-write premiums and cache-read discounts.</li>
-  <li><strong>The problems are narrow by design.</strong> Contamination resistance means small, spec-dense, self-contained tasks — the regime where a raw call is even viable. On large-codebase work the raw-API lane doesn't exist, and the harness tax is simply the price of entry.</li>
-</ul>
-
-<h2 id="reproduce">Reproduce it</h2>
+<h2 id="reproduce">Reproducing these results</h2>
 <pre><code>git clone https://github.com/igniting/harness-tax && cd harness-tax
 pip install -r requirements.txt
 export ANTHROPIC_API_KEY=sk-...
@@ -420,7 +404,14 @@ python3 harness/cc_runner.py --models claude-opus-4-6 claude-opus-4-8 claude-son
 
 # compare
 python3 harness/cc_report.py results/cc_results.jsonl results/run1.jsonl</code></pre>
-<p>Every run in this post — result rows, solution files, and full transcripts — is committed under <a href="https://github.com/igniting/harness-tax/tree/main/results"><code>results/</code></a>.</p>
+
+<div class="footnotes">
+  <ol>
+    <li id="fn1">Raw-lane cost is computed from list prices (Opus: $5/$25 per MTok in/out; Sonnet 5: $2/$10). Harness-lane cost is Claude Code's self-reported <code>total_cost_usd</code>, which includes cache-write premiums and cache-read discounts, so the two lanes are priced by different accounting. <a class="back" href="#fnref1">↩</a></li>
+    <li id="fn2">The two runs took 13 turns each, accumulating 638,779 and 1,016,995 context tokens at $1.13 and $2.94 respectively; both produced passing solutions. Sonnet 5's other thirteen single-shot runs completed in the normal two turns. <a class="back" href="#fnref2">↩</a></li>
+    <li id="fn3">Opus 4-7 was dropped after the raw baseline to limit spend; its raw profile (80%, failures on p2 and p3) sits between 4-6 and 4-8. <a class="back" href="#fnref3">↩</a></li>
+  </ol>
+</div>
 
 </article>
 </main>
