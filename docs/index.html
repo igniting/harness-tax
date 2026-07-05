@@ -7,91 +7,118 @@
 <meta name="description" content="A micro-benchmark comparing raw Anthropic API calls against Claude Code harness runs on five contamination-resistant coding problems: pass@1, context overhead, cost, and turns.">
 <style>
 :root{
-  --page:#f9f9f7; --surface:#fcfcfb;
-  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
-  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --paper:#f9f6ef; --paper-2:#f1ecdf;
+  --ink:#1f1c17; --ink-2:#5d5850; --muted:#8b8477;
+  --grid:#e5dfd0; --axis:#c9c2b0; --rule:#d9d3c3; --border:rgba(31,28,23,.14);
+  --accent:#a84e26;
   /* model colors (entity-fixed across every chart) */
   --m1:#2a78d6; /* Opus 4-6  blue  */
   --m2:#1baf7a; /* Opus 4-7  aqua  */
   --m3:#eda100; /* Opus 4-8  yellow*/
   --m4:#008300; /* Sonnet 5  green */
   /* mode ramp (ordered: raw -> single-shot -> agentic), one blue hue */
-  --mode1:#86b6ef; --mode2:#2a78d6; --mode3:#104281;
+  --mode1:#6da7ec; --mode2:#256abf; --mode3:#0d366b;
   --good:#006300;
-  --code-bg:#f0efec;
+  --serif:Charter,"Bitstream Charter","Iowan Old Style","Palatino Linotype",Palatino,Georgia,Cambria,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --page:#0d0d0d; --surface:#1a1a19;
-    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
-    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --paper:#171511; --paper-2:#22201a;
+    --ink:#ece7db; --ink-2:#b3ac9d; --muted:#8b8477;
+    --grid:#2e2b24; --axis:#413d33; --rule:#3a362c; --border:rgba(236,231,219,.16);
+    --accent:#d98a5e;
     --m1:#3987e5; --m2:#199e70; --m3:#c98500; --m4:#008300;
     --mode1:#9ec5f4; --mode2:#3987e5; --mode3:#184f95;
     --good:#0ca30c;
-    --code-bg:#242423;
   }
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
-  margin:0; background:var(--page); color:var(--ink);
-  font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif;
-  -webkit-font-smoothing:antialiased;
+  margin:0; background:var(--paper); color:var(--ink);
+  font:18px/1.72 var(--serif);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
-a{color:var(--m1); text-decoration:none}
-a:hover{text-decoration:underline}
-header.site{
-  border-bottom:1px solid var(--border); background:var(--surface);
-  position:sticky; top:0; z-index:5;
+.smallcaps{
+  font-family:var(--sans); font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--muted);
 }
+a{color:inherit; text-decoration:underline; text-decoration-color:var(--rule); text-underline-offset:3px; text-decoration-thickness:1px}
+a:hover{color:var(--accent); text-decoration-color:var(--accent)}
+header.site{border-bottom:1px solid var(--rule)}
 header.site .row{
-  max-width:880px; margin:0 auto; padding:12px 20px;
+  max-width:880px; margin:0 auto; padding:18px 24px;
   display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
 }
-header.site .name{font-weight:700; letter-spacing:-.01em}
-header.site nav{margin-left:auto; display:flex; gap:18px; font-size:14px; color:var(--ink-2)}
-main{max-width:880px; margin:0 auto; padding:0 20px 80px}
-article > *{max-width:680px}
+header.site .name{
+  font-family:var(--sans); font-size:12px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink);
+}
+header.site nav{margin-left:auto; display:flex; gap:22px}
+header.site nav a{
+  font-family:var(--sans); font-size:11.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-2); text-decoration:none;
+}
+header.site nav a:hover{color:var(--accent)}
+main{max-width:880px; margin:0 auto; padding:0 24px 96px}
+article > *{max-width:660px}
 article > .wide{max-width:none}
-.hero{padding:56px 0 8px}
-.hero h1{font-size:clamp(28px,5vw,42px); line-height:1.15; letter-spacing:-.02em; margin:0 0 12px}
-.hero .dek{font-size:18px; color:var(--ink-2); margin:0 0 10px}
-.hero .meta{font-size:14px; color:var(--muted)}
-h2{font-size:24px; letter-spacing:-.01em; margin:52px 0 12px}
-h3{font-size:18px; margin:32px 0 8px}
+.hero{padding:72px 0 16px}
+.hero h1{
+  font-size:clamp(34px,6vw,54px); line-height:1.12; font-weight:500;
+  letter-spacing:-.015em; margin:0 0 20px;
+}
+.hero .dek{font-size:20px; line-height:1.6; color:var(--ink-2); margin:0 0 22px}
+.hero .meta{
+  font-family:var(--sans); font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--muted);
+}
+.hero .meta a{color:var(--muted)}
+h2{font-size:29px; font-weight:500; line-height:1.25; letter-spacing:-.01em; margin:64px 0 14px}
+h3{font-size:20px; font-weight:600; line-height:1.35; margin:36px 0 8px}
 p, li{color:var(--ink)}
-.note{color:var(--ink-2); font-size:14px}
-code{
-  font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  background:var(--code-bg); padding:1px 5px; border-radius:4px;
-}
+li{margin:4px 0}
+.note{color:var(--ink-2); font-size:15.5px}
+code{font:.78em/1.5 var(--mono); background:var(--paper-2); padding:1px 5px; border-radius:3px}
 pre{
-  background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
-  padding:14px 16px; overflow-x:auto;
+  background:var(--paper-2); border:1px solid var(--rule); border-radius:4px;
+  padding:16px 18px; overflow-x:auto;
 }
-pre code{background:none; padding:0}
-/* stat tiles */
-.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin:28px 0 8px}
-.tile{
-  background:var(--surface); border:1px solid var(--border); border-radius:10px;
-  padding:16px 18px;
+pre code{background:none; padding:0; font-size:12.5px}
+/* headline figures */
+.tiles{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:20px 28px; margin:36px 0 12px; padding:22px 0;
+  border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
 }
-.tile .label{font-size:13px; color:var(--ink-2)}
-.tile .value{font-size:34px; font-weight:600; letter-spacing:-.02em; margin:2px 0 0}
-.tile .sub{font-size:13px; color:var(--muted)}
+.tile .label{
+  font-family:var(--sans); font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); line-height:1.5;
+  min-height:33px; /* two label lines, so tile values baseline-align */
+}
+.tile .value{font-size:36px; font-weight:500; letter-spacing:-.01em; margin:6px 0 2px}
+.tile .sub{font-family:var(--sans); font-size:12.5px; color:var(--ink-2)}
 .tile .sub .up{color:var(--good); font-weight:600}
-/* chart cards */
-figure.chart{
-  margin:24px 0; background:var(--surface); border:1px solid var(--border);
-  border-radius:12px; padding:18px 18px 10px; position:relative;
+/* figures */
+figure.chart{margin:40px 0; padding:0; position:relative}
+figure.chart figcaption{
+  font-family:var(--sans); font-size:13px; line-height:1.6; color:var(--ink-2);
+  margin:10px auto 0; max-width:660px;
 }
-figure.chart figcaption{font-size:15px; font-weight:600; margin:0 0 2px}
-figure.chart .sub{font-size:13px; color:var(--ink-2); margin:0 0 10px}
-.legend{display:flex; flex-wrap:wrap; gap:8px 18px; font-size:13px; color:var(--ink-2); margin:2px 0 6px}
+figure.chart figcaption .fignum{
+  font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  font-size:11px; color:var(--ink); margin-right:6px;
+}
+.legend{
+  display:flex; flex-wrap:wrap; gap:8px 20px; font-family:var(--sans);
+  font-size:12.5px; color:var(--ink-2); margin:0 0 8px;
+}
 .legend .key{display:inline-flex; align-items:center; gap:7px}
-.swatch{width:11px; height:11px; border-radius:3px; display:inline-block}
+.swatch{width:10px; height:10px; border-radius:2px; display:inline-block}
 svg.viz{display:block; width:100%; height:auto}
-svg.viz text{font:12px system-ui,-apple-system,"Segoe UI",sans-serif; fill:var(--muted)}
+svg.viz text{font:12px var(--sans); fill:var(--muted)}
 svg.viz .tick{font-variant-numeric:tabular-nums}
 svg.viz .grid{stroke:var(--grid); stroke-width:1}
 svg.viz .baseline{stroke:var(--axis); stroke-width:1}
@@ -100,33 +127,45 @@ svg.viz .rowlabel{fill:var(--ink-2)}
 svg.viz .anno{fill:var(--ink-2); font-weight:600}
 .fill-m1{fill:var(--m1)} .fill-m2{fill:var(--m2)} .fill-m3{fill:var(--m3)} .fill-m4{fill:var(--m4)}
 .fill-mode1{fill:var(--mode1)} .fill-mode2{fill:var(--mode2)} .fill-mode3{fill:var(--mode3)}
-.ring{stroke:var(--surface); stroke-width:2}
+.ring{stroke:var(--paper); stroke-width:2}
 .hit{fill:transparent; cursor:pointer}
 .tooltip{
   position:absolute; pointer-events:none; z-index:10; display:none;
-  background:var(--ink); color:var(--page); font-size:12.5px; line-height:1.45;
-  padding:7px 10px; border-radius:7px; max-width:240px; box-shadow:0 4px 14px rgba(0,0,0,.25);
+  background:var(--ink); color:var(--paper); font:12.5px/1.45 var(--sans);
+  padding:7px 10px; border-radius:4px; max-width:240px; box-shadow:0 3px 12px rgba(0,0,0,.22);
 }
 .tooltip b{font-weight:600}
-details.tv{margin:4px 0 8px; font-size:14px}
-details.tv summary{cursor:pointer; color:var(--ink-2); font-size:13px; padding:4px 0}
-.tablewrap{overflow-x:auto; margin:16px 0}
-table{border-collapse:collapse; font-size:14px; min-width:420px}
-th,td{padding:7px 12px; text-align:right; border-bottom:1px solid var(--grid); font-variant-numeric:tabular-nums}
-th{color:var(--ink-2); font-weight:600}
-th:first-child, td:first-child{text-align:left}
+details.tv{margin:8px auto 0; max-width:660px}
+details.tv summary{
+  cursor:pointer; font-family:var(--sans); font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); padding:4px 0;
+}
+details.tv summary:hover{color:var(--accent)}
+/* booktabs tables */
+.tablewrap{overflow-x:auto; margin:20px 0}
+table{
+  border-collapse:collapse; font-family:var(--sans); font-size:13.5px;
+  line-height:1.5; min-width:420px;
+  border-top:1.5px solid var(--ink); border-bottom:1.5px solid var(--ink);
+}
+th,td{padding:7px 14px; text-align:right; font-variant-numeric:tabular-nums; border:none}
+thead th{border-bottom:1px solid var(--axis); color:var(--ink); font-weight:600}
+th:first-child, td:first-child{text-align:left; padding-left:2px}
+th:last-child, td:last-child{padding-right:2px}
 td:first-child{color:var(--ink-2)}
-tr.hl td{font-weight:600}
+tr.hl td{font-weight:600; color:var(--ink)}
+tr.hl td:first-child{color:var(--ink)}
 blockquote{
-  margin:20px 0; padding:10px 18px; border-left:3px solid var(--m1);
-  color:var(--ink-2); background:var(--surface); border-radius:0 8px 8px 0;
+  margin:24px 0; padding:2px 0 2px 22px; border-left:2px solid var(--axis);
+  color:var(--ink-2);
 }
-footer.site{
-  border-top:1px solid var(--border); margin-top:40px; padding:24px 20px 48px;
-  font-size:14px; color:var(--muted);
+footer.site{border-top:1px solid var(--rule); margin-top:48px}
+footer.site .row{
+  max-width:880px; margin:0 auto; padding:26px 24px 56px;
+  font-family:var(--sans); font-size:12px; letter-spacing:.06em; color:var(--muted);
 }
-footer.site .row{max-width:880px; margin:0 auto}
-@media (max-width:640px){ th,td{padding:6px 8px} }
+footer.site .row a{color:var(--muted)}
+@media (max-width:640px){ th,td{padding:6px 8px} .hero{padding-top:48px} }
 </style>
 </head>
 <body>
@@ -234,14 +273,13 @@ footer.site .row{max-width:880px; margin:0 auto}
 <p>Now the same problems through Claude Code. Opus 4-7 was dropped from harness runs after its raw baseline; the three remaining models each ran raw, single-shot, and agentic.</p>
 
 <figure class="chart wide" id="c-pass">
-  <figcaption>pass@1 by model and configuration</figcaption>
-  <p class="sub">Raw API n=25 per model; harness single-shot n=15; agentic n=5.</p>
   <div class="legend">
     <span class="key"><span class="swatch" style="background:var(--mode1)"></span>Raw API</span>
     <span class="key"><span class="swatch" style="background:var(--mode2)"></span>Harness single-shot</span>
     <span class="key"><span class="swatch" style="background:var(--mode3)"></span>Harness agentic</span>
   </div>
   <div data-chart="pass"></div>
+  <figcaption><span class="fignum">Figure 1.</span>pass@1 by model and configuration. Raw API is 25 runs per model, harness single-shot 15, agentic 5.</figcaption>
   <details class="tv"><summary>Data table</summary>
     <div class="tablewrap"><table>
       <thead><tr><th>Model</th><th>Raw API</th><th>Single-shot</th><th>Agentic</th></tr></thead>
@@ -261,14 +299,13 @@ footer.site .row{max-width:880px; margin:0 auto}
 <p>A raw call on these problems sends 400–1,000 input tokens. The same problem through the single-shot harness touches 36,000–71,000 context tokens per run — the system prompt, the tool catalog, and every turn's cache writes and reads, again and again across the loop.</p>
 
 <figure class="chart wide" id="c-tax">
-  <figcaption>Context overhead: harness single-shot vs raw API, per problem</figcaption>
-  <p class="sub">Total harness context tokens (input + cache creation + cache read, all turns) ÷ raw API input tokens. Log scale.</p>
   <div class="legend">
     <span class="key"><span class="swatch" style="background:var(--m1)"></span>Opus 4-6</span>
     <span class="key"><span class="swatch" style="background:var(--m3)"></span>Opus 4-8</span>
     <span class="key"><span class="swatch" style="background:var(--m4)"></span>Sonnet 5</span>
   </div>
   <div data-chart="tax"></div>
+  <figcaption><span class="fignum">Figure 2.</span>Context overhead of the single-shot harness, per problem: total harness context tokens (input + cache creation + cache read, across all turns) divided by raw-API input tokens. Log scale.</figcaption>
   <details class="tv"><summary>Data table</summary>
     <div class="tablewrap"><table>
       <thead><tr><th>Problem</th><th>Opus 4-6</th><th>Opus 4-8</th><th>Sonnet 5</th></tr></thead>
@@ -289,14 +326,13 @@ footer.site .row{max-width:880px; margin:0 auto}
 <h3>Cost: per run vs per solve</h3>
 
 <figure class="chart wide" id="c-cost">
-  <figcaption>Average cost per run, by model and configuration</figcaption>
-  <p class="sub">Raw API is the model's list price on one call; harness cost is Claude Code's reported total.</p>
   <div class="legend">
     <span class="key"><span class="swatch" style="background:var(--mode1)"></span>Raw API</span>
     <span class="key"><span class="swatch" style="background:var(--mode2)"></span>Harness single-shot</span>
     <span class="key"><span class="swatch" style="background:var(--mode3)"></span>Harness agentic</span>
   </div>
   <div data-chart="cost"></div>
+  <figcaption><span class="fignum">Figure 3.</span>Average cost per run, by model and configuration. Raw API is the model's list price on one call; harness cost is Claude Code's reported total.</figcaption>
   <details class="tv"><summary>Data table</summary>
     <div class="tablewrap"><table>
       <thead><tr><th>Model</th><th>Raw API</th><th>Single-shot</th><th>Agentic</th></tr></thead>
@@ -316,14 +352,13 @@ footer.site .row{max-width:880px; margin:0 auto}
 <p>Agentic mode is where the harness earns its keep differently: not by making the model smarter, but by letting it check. Every model reached 100%, taking 2–10 turns per problem.</p>
 
 <figure class="chart wide" id="c-turns">
-  <figcaption>Agentic turns per problem</figcaption>
-  <p class="sub">One sample per cell; every run passed. More turns ≈ more scratch-test iterations.</p>
   <div class="legend">
     <span class="key"><span class="swatch" style="background:var(--m1)"></span>Opus 4-6</span>
     <span class="key"><span class="swatch" style="background:var(--m3)"></span>Opus 4-8</span>
     <span class="key"><span class="swatch" style="background:var(--m4)"></span>Sonnet 5</span>
   </div>
   <div data-chart="turns"></div>
+  <figcaption><span class="fignum">Figure 4.</span>Agentic turns per problem, one sample per cell; every run passed. More turns means more scratch-test iterations.</figcaption>
   <details class="tv"><summary>Data table</summary>
     <div class="tablewrap"><table>
       <thead><tr><th>Problem</th><th>Opus 4-6</th><th>Opus 4-8</th><th>Sonnet 5</th></tr></thead>
