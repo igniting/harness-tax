@@ -8,7 +8,17 @@ runs to quantify the tradeoff.
 Uses contamination-resistant problems (invented specs not in training data) so
 results reflect genuine reasoning, not memorized patterns.
 
-See [RESULTS.md](RESULTS.md) for findings from our runs.
+See [RESULTS.md](RESULTS.md) for findings from our runs, or read the
+**[technical blog post](https://igniting.github.io/harness-tax/)** with
+interactive charts.
+
+## Website
+
+The site lives in [`docs/`](docs/) (a single self-contained page, no build
+step) and deploys via [`.github/workflows/pages.yml`](.github/workflows/pages.yml).
+One-time setup: in the repo's **Settings → Pages**, set **Source** to
+**GitHub Actions**. After that, any push to `main` touching `docs/` redeploys
+it to <https://igniting.github.io/harness-tax/>.
 
 ## What it measures
 
