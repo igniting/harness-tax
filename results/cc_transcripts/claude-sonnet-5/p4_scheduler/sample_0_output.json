@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 83109,
+  "duration_api_ms": 82729,
+  "ttft_ms": 51992,
+  "ttft_stream_ms": 1702,
+  "time_to_request_ms": 39,
+  "num_turns": 5,
+  "result": "```python\n\"\"\"Deterministic greedy scheduler for a DAG of tasks on identical workers.\"\"\"\n\nimport heapq\n\n\ndef schedule(tasks, workers):\n    \"\"\"Schedule tasks on `workers` identical workers.\n\n    tasks: dict[str, tuple[int, list[str]]] mapping task_id -> (duration, deps)\n    workers: number of identical workers (>= 1)\n\n    Returns dict[str, tuple[int, int]] mapping task_id -> (start_time, worker_index).\n\n    Raises ValueError if the dependency graph has a cycle or references an\n    unknown task id.\n    \"\"\"\n    for task_id, (_duration, deps) in tasks.items():\n        for dep in deps:\n            if dep not in tasks:\n                raise ValueError(\n                    f\"Task {task_id!r} depends on unknown task {dep!r}\"\n                )\n\n    # Cycle detection via iterative DFS (white/gray/black coloring).\n    WHITE, GRAY, BLACK = 0, 1, 2\n    color = {task_id: WHITE for task_id in tasks}\n    for start in tasks:\n        if color[start] != WHITE:\n            continue\n        stack = [(start, iter(tasks[start][1]))]\n        color[start] = GRAY\n        while stack:\n            node, it = stack[-1]\n            advanced = False\n            for dep in it:\n                if color[dep] == GRAY:\n                    raise ValueError(\"Dependency graph has a cycle\")\n                if color[dep] == WHITE:\n                    color[dep] = GRAY\n                    stack.append((dep, iter(tasks[dep][1])))\n                    advanced = True\n                    break\n            if not advanced:\n                color[node] = BLACK\n                stack.pop()\n\n    if not tasks:\n        return {}\n\n    unique_deps = {task_id: set(deps) for task_id, (_d, deps) in tasks.items()}\n    remaining_count = {task_id: len(d) for task_id, d in unique_deps.items()}\n\n    dependents = {task_id: [] for task_id in tasks}\n    for task_id, deps in unique_deps.items():\n        for dep in deps:\n            dependents[dep].append(task_id)\n\n    started = set()\n    result = {}\n    remaining = len(tasks)\n\n    idle_workers = list(range(workers))\n    heapq.heapify(idle_workers)\n    running = []  # heap of (finish_time, worker_index, task_id)\n\n    ready_set = {task_id for task_id, cnt in remaining_count.items() if cnt == 0}\n\n    current_time = 0\n\n    while remaining > 0:\n        # Free workers for tasks finishing exactly at current_time, and\n        # promote newly-ready dependents.\n        while running and running[0][0] == current_time:\n            finish_time, worker_idx, finished_task = heapq.heappop(running)\n            heapq.heappush(idle_workers, worker_idx)\n            for dep_task in dependents[finished_task]:\n                remaining_count[dep_task] -= 1\n                if remaining_count[dep_task] == 0:\n                    ready_set.add(dep_task)\n\n        # Greedily assign ready tasks to idle workers.\n        while idle_workers and ready_set:\n            chosen = min(ready_set, key=lambda t: (-tasks[t][0], t))\n            worker_idx = heapq.heappop(idle_workers)\n            ready_set.discard(chosen)\n            started.add(chosen)\n            result[chosen] = (current_time, worker_idx)\n            remaining -= 1\n            duration = tasks[chosen][0]\n            heapq.heappush(running, (current_time + duration, worker_idx, chosen))\n\n        if remaining == 0:\n            break\n\n        # Advance to the next event: the earliest running task's finish time.\n        current_time = running[0][0]\n\n    return result\n```\n\nWritten to `solution.py` and verified against the provided example plus edge cases (cycles, unknown deps, empty input, single worker, more workers than tasks).",
+  "stop_reason": "end_turn",
+  "session_id": "1081f0f7-930c-4407-b193-63466419d22f",
+  "total_cost_usd": 0.2282604,
+  "usage": {
+    "input_tokens": 9,
+    "cache_creation_input_tokens": 15694,
+    "cache_read_input_tokens": 148953,
+    "output_tokens": 8313,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 15694
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-5": {
+      "inputTokens": 9,
+      "outputTokens": 8313,
+      "cacheReadInputTokens": 148953,
+      "cacheCreationInputTokens": 15694,
+      "webSearchRequests": 0,
+      "costUSD": 0.2282604,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "e7b2de29-bc20-4f1c-bf08-09cd2596e184"
+}

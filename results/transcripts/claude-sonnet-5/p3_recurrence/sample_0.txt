@@ -1,0 +1,85 @@
+```python
+"""
+recurring_event_expander.py
+
+A module for expanding recurring events (defined by a local start date,
+a fixed day-step, and a local wall-clock time in a given IANA timezone)
+into a list of UTC timestamps.
+
+Resolution rules applied to each occurrence's local wall time:
+
+1. If the wall time exists exactly once on that date in the given zone,
+   use that instant.
+2. If the wall time falls in a spring-forward gap (does not exist),
+   the resulting instant is equivalent to shifting the wall clock
+   forward by the size of the gap, landing on the post-transition
+   offset.
+3. If the wall time is ambiguous (fall-back overlap), the EARLIER of
+   the two possible instants (pre-transition offset) is used.
+
+Both rule 2 and rule 3 are naturally satisfied by constructing the
+localized datetime with `fold=0` (the default fold value) and letting
+`zoneinfo`/`datetime` resolve the UTC offset accordingly, per PEP 495
+semantics as implemented by Python's `zoneinfo` module.
+"""
+
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+
+def expand(
+    start_date: str,
+    every_days: int,
+    local_time: str,
+    tz_name: str,
+    count: int,
+) -> list[str]:
+    """
+    Expand a recurring event into `count` UTC occurrence timestamps.
+
+    Args:
+        start_date: "YYYY-MM-DD" local calendar date of the first occurrence.
+        every_days: positive int step (in calendar days) between occurrences.
+        local_time: "HH:MM" (24h) local wall-clock time of each occurrence.
+        tz_name: IANA timezone name (e.g. "America/New_York").
+        count: number of occurrences to produce.
+
+    Returns:
+        A list of `count` strings, each formatted as "YYYY-MM-DDTHH:MM:SSZ",
+        representing the occurrence converted to UTC.
+    """
+    if every_days <= 0:
+        raise ValueError("every_days must be a positive integer")
+    if count < 0:
+        raise ValueError("count must be non-negative")
+
+    year_str, month_str, day_str = start_date.split("-")
+    base_date = date(int(year_str), int(month_str), int(day_str))
+
+    hour_str, minute_str = local_time.split(":")
+    hour, minute = int(hour_str), int(minute_str)
+
+    tz = ZoneInfo(tz_name)
+
+    results: list[str] = []
+    for k in range(count):
+        occ_date = base_date + timedelta(days=k * every_days)
+        naive = datetime(
+            occ_date.year, occ_date.month, occ_date.day, hour, minute
+        )
+        # fold=0 selects:
+        #   - the only valid offset when unambiguous
+        #   - the post-transition offset (forward-shifted) when in a gap
+        #   - the earlier (pre-transition) instant when ambiguous
+        local_dt = naive.replace(tzinfo=tz, fold=0)
+        utc_dt = local_dt.astimezone(timezone.utc)
+        results.append(utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+    return results
+
+
+if __name__ == "__main__":
+    # Simple manual sanity checks.
+    print(expand("2023-03-10", 1, "02:30", "America/New_York", 3))
+    print(expand("2023-11-04", 1, "01:30", "America/New_York", 2))
+```

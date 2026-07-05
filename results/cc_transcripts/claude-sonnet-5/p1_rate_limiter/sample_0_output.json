@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 46641,
+  "duration_api_ms": 46284,
+  "ttft_ms": 20502,
+  "ttft_stream_ms": 1235,
+  "time_to_request_ms": 35,
+  "num_turns": 4,
+  "result": "All tests pass. `solution.py` is complete and verified.\n\n```python\nfrom collections import deque\n\n\nclass RateLimiter:\n    \"\"\"Sliding-window rate limiter with per-key limits and a global limit.\"\"\"\n\n    def __init__(self, global_limit: int, window_ms: int) -> None:\n        self.global_limit = global_limit\n        self.window_ms = window_ms\n        self._keys = {}  # key -> {\"limit\", \"weight\", \"events\": deque[(ts, weight)], \"sum\"}\n        self._global_events = deque()  # (ts, weight)\n        self._global_sum = 0\n\n    def set_key_limit(self, key: str, limit: int, weight: int = 1) -> None:\n        info = self._keys.get(key)\n        if info is None:\n            self._keys[key] = {\"limit\": limit, \"weight\": weight, \"events\": deque(), \"sum\": 0}\n        else:\n            info[\"limit\"] = limit\n            info[\"weight\"] = weight\n\n    def _evict_key(self, key: str, ts: int) -> None:\n        info = self._keys[key]\n        cutoff = ts - self.window_ms\n        events = info[\"events\"]\n        while events and events[0][0] <= cutoff:\n            _, w = events.popleft()\n            info[\"sum\"] -= w\n\n    def _evict_global(self, ts: int) -> None:\n        cutoff = ts - self.window_ms\n        events = self._global_events\n        while events and events[0][0] <= cutoff:\n            _, w = events.popleft()\n            self._global_sum -= w\n\n    def allow(self, key: str, ts: int) -> bool:\n        if key not in self._keys:\n            return False\n\n        self._evict_key(key, ts)\n        self._evict_global(ts)\n\n        info = self._keys[key]\n        w = info[\"weight\"]\n\n        if info[\"sum\"] + w <= info[\"limit\"] and self._global_sum + w <= self.global_limit:\n            info[\"events\"].append((ts, w))\n            info[\"sum\"] += w\n            self._global_events.append((ts, w))\n            self._global_sum += w\n            return True\n\n        return False\n\n    def usage(self, ts: int) -> dict:\n        result = {}\n        for key in self._keys:\n            self._evict_key(key, ts)\n            result[key] = self._keys[key][\"sum\"]\n        return result\n```",
+  "stop_reason": "end_turn",
+  "session_id": "8c1b2ed0-1a8c-44d9-94f7-d40f68e7f6a5",
+  "total_cost_usd": 0.2211429,
+  "usage": {
+    "input_tokens": 7,
+    "cache_creation_input_tokens": 32088,
+    "cache_read_input_tokens": 89673,
+    "output_tokens": 4926,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 32088
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-5": {
+      "inputTokens": 7,
+      "outputTokens": 4926,
+      "cacheReadInputTokens": 89673,
+      "cacheCreationInputTokens": 32088,
+      "webSearchRequests": 0,
+      "costUSD": 0.2211429,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "3046b959-3bf8-4227-ab4d-7b849c6fd822"
+}

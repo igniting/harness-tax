@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 138091,
+  "duration_api_ms": 137616,
+  "ttft_ms": 4300,
+  "ttft_stream_ms": 3839,
+  "time_to_request_ms": 61,
+  "num_turns": 10,
+  "result": "All tests pass. `solution.py` implements the deterministic greedy DAG scheduler with cycle/unknown-dep detection, correct priority ordering (largest duration, then lexicographically smallest task_id), and smallest-index worker assignment.",
+  "stop_reason": "end_turn",
+  "session_id": "e49c1a6d-b855-4ce6-a041-5f15cbc060c3",
+  "total_cost_usd": 0.43653000000000003,
+  "usage": {
+    "input_tokens": 11,
+    "cache_creation_input_tokens": 16854,
+    "cache_read_input_tokens": 259775,
+    "output_tokens": 8050,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 16854
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-opus-4-6": {
+      "inputTokens": 11,
+      "outputTokens": 8050,
+      "cacheReadInputTokens": 259775,
+      "cacheCreationInputTokens": 16854,
+      "webSearchRequests": 0,
+      "costUSD": 0.43653000000000003,
+      "contextWindow": 200000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "1a06dbce-2be8-4ddd-80dd-189ca03a3f23"
+}

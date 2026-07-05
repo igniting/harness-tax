@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 86504,
+  "duration_api_ms": 86077,
+  "ttft_ms": 43443,
+  "ttft_stream_ms": 1225,
+  "time_to_request_ms": 35,
+  "num_turns": 4,
+  "result": "All cases verify correctly:\n\n- **Spring-forward gap** (`02:30` NY on 2023-03-12): shifts to `03:30 EDT` \u2192 `07:30:00Z` \u2713\n- **Fall-back ambiguity** (`01:30` NY on 2023-11-05): picks earlier EDT instant \u2192 `05:30:00Z` \u2713\n- **Normal time**: `09:00 EST` \u2192 `14:00:00Z` \u2713\n- **Recurrence crossing DST**: offset correctly changes `17:00Z` \u2192 `16:00Z` across the transition \u2713\n- **Calendar arithmetic across year boundary** (every 7 days from Dec 25) \u2713\n- **London** spring-forward and fall-back both correct \u2713\n\nThe verification confirmed the key insight: interpreting the wall time with `fold=0` yields the correct instant in *all three* cases \u2014 for a gap, `fold=0` uses the pre-transition offset, which is exactly equivalent to shifting the wall clock forward by the gap size. The three explicit branches in `_resolve_to_utc` are kept to document the reasoning, but each provably selects the right instant.\n\n`solution.py` is complete and correct.\n\n```python\n\"\"\"Expand a recurring event into a list of UTC timestamps.\n\nThe single public function, :func:`expand`, takes the local calendar date of the\nfirst occurrence, a recurrence stride in calendar days, an intended local\nwall-clock time, an IANA timezone name, and a count, and returns each occurrence\nconverted to UTC.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom datetime import datetime, timedelta, timezone\nfrom zoneinfo import ZoneInfo\n\n\ndef _resolve_to_utc(local_date, hour, minute, tz):\n    \"\"\"Resolve one wall time on ``local_date`` in ``tz`` to a UTC datetime.\n\n    Resolution rules:\n      1. Existing, unambiguous wall time -> use it.\n      2. Non-existent wall time (spring-forward gap) -> shift the wall clock\n         forward by the size of the gap.\n      3. Ambiguous wall time (fall-back overlap) -> use the earlier instant.\n    \"\"\"\n    naive = datetime(local_date.year, local_date.month, local_date.day, hour, minute)\n\n    # fold=0 gives the offset in effect *before* any transition at this wall time.\n    # fold=1 gives the offset in effect *after* it.\n    dt0 = naive.replace(tzinfo=tz, fold=0)\n    dt1 = naive.replace(tzinfo=tz, fold=1)\n    off0 = dt0.utcoffset()\n    off1 = dt1.utcoffset()\n\n    if off0 == off1:\n        # Unique wall time (rule 1).\n        chosen = dt0\n    elif off0 < off1:\n        # Spring-forward gap (rule 2): the offset jumps forward. Interpreting the\n        # wall time with the pre-transition offset (fold=0) yields exactly the\n        # instant whose post-transition wall clock is the original time shifted\n        # forward by the gap size.\n        chosen = dt0\n    else:\n        # Fall-back overlap (rule 3): fold=0 is the earlier of the two instants.\n        chosen = dt0\n\n    return chosen.astimezone(timezone.utc)\n\n\ndef expand(start_date: str, every_days: int, local_time: str, tz_name: str, count: int) -> list[str]:\n    tz = ZoneInfo(tz_name)\n    start = datetime.strptime(start_date, \"%Y-%m-%d\").date()\n    hour, minute = (int(part) for part in local_time.split(\":\"))\n\n    results: list[str] = []\n    for k in range(count):\n        local_date = start + timedelta(days=k * every_days)\n        utc = _resolve_to_utc(local_date, hour, minute, tz)\n        results.append(utc.strftime(\"%Y-%m-%dT%H:%M:%SZ\"))\n    return results\n```",
+  "stop_reason": "end_turn",
+  "session_id": "cbcf358a-ac8b-4a18-87f0-960ba0534f00",
+  "total_cost_usd": 0.298063,
+  "usage": {
+    "input_tokens": 2363,
+    "cache_creation_input_tokens": 10838,
+    "cache_read_input_tokens": 72921,
+    "output_tokens": 7282,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 10838
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-opus-4-8": {
+      "inputTokens": 2363,
+      "outputTokens": 7282,
+      "cacheReadInputTokens": 72921,
+      "cacheCreationInputTokens": 10838,
+      "webSearchRequests": 0,
+      "costUSD": 0.298063,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "da7179f4-4f68-40f6-84ee-e4dc0014e952"
+}

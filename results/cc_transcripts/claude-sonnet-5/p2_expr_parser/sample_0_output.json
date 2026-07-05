@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 113956,
+  "duration_api_ms": 113637,
+  "ttft_ms": 75435,
+  "ttft_stream_ms": 1067,
+  "time_to_request_ms": 35,
+  "num_turns": 4,
+  "result": "All examples and edge cases pass.\n\n```python\n\"\"\"Evaluator for the \"Calc-26\" arbitrary-precision integer expression language.\n\nGrammar (lowest to highest precedence):\n    @               (left-assoc, midpoint)\n    + -             (left-assoc)\n    * /             (left-assoc)\n    ^               (right-assoc, power)\n    unary -         (binds tighter than ^'s left operand, forbidden directly\n                     after ^ unless parenthesized)\n    ( expr )\n    NUMBER\n\"\"\"\n\n\nclass _Token:\n    __slots__ = (\"kind\", \"value\")\n\n    def __init__(self, kind, value=None):\n        self.kind = kind\n        self.value = value\n\n    def __repr__(self):\n        return f\"_Token({self.kind!r}, {self.value!r})\"\n\n\n_SIMPLE_TOKENS = set(\"()@+-*/^\")\n\n\ndef _tokenize(expr):\n    tokens = []\n    i = 0\n    n = len(expr)\n    while i < n:\n        c = expr[i]\n        if c.isspace():\n            i += 1\n            continue\n        if c.isdigit():\n            j = i\n            while j < n and expr[j].isdigit():\n                j += 1\n            tokens.append(_Token(\"NUM\", int(expr[i:j])))\n            i = j\n            continue\n        if c in _SIMPLE_TOKENS:\n            tokens.append(_Token(c))\n            i += 1\n            continue\n        raise ValueError(f\"Unexpected character {c!r} in expression\")\n    return tokens\n\n\nclass _Parser:\n    def __init__(self, tokens):\n        self.tokens = tokens\n        self.pos = 0\n\n    def _peek(self):\n        if self.pos < len(self.tokens):\n            return self.tokens[self.pos]\n        return None\n\n    def _peek_kind(self):\n        tok = self._peek()\n        return tok.kind if tok is not None else None\n\n    def _advance(self):\n        tok = self._peek()\n        if tok is None:\n            raise ValueError(\"Unexpected end of expression\")\n        self.pos += 1\n        return tok\n\n    def _expect(self, kind):\n        tok = self._advance()\n        if tok.kind != kind:\n            raise ValueError(f\"Expected {kind!r} but found {tok.kind!r}\")\n        return tok\n\n    # @  (lowest precedence, left-assoc)\n    def parse_at(self):\n        left = self.parse_addsub()\n        while self._peek_kind() == \"@\":\n            self._advance()\n            right = self.parse_addsub()\n            left = (left + right) // 2\n        return left\n\n    # + -\n    def parse_addsub(self):\n        left = self.parse_muldiv()\n        while self._peek_kind() in (\"+\", \"-\"):\n            op = self._advance().kind\n            right = self.parse_muldiv()\n            left = left + right if op == \"+\" else left - right\n        return left\n\n    # * /\n    def parse_muldiv(self):\n        left = self.parse_pow()\n        while self._peek_kind() in (\"*\", \"/\"):\n            op = self._advance().kind\n            right = self.parse_pow()\n            if op == \"*\":\n                left = left * right\n            else:\n                if right == 0:\n                    raise ZeroDivisionError(\"division by zero\")\n                left = left // right\n        return left\n\n    # ^  (right-assoc)\n    def parse_pow(self):\n        left = self.parse_unary()\n        if self._peek_kind() == \"^\":\n            self._advance()\n            if self._peek_kind() == \"-\":\n                raise ValueError(\n                    \"Unary minus may not directly follow '^'; use parentheses\"\n                )\n            right = self.parse_pow()\n            if right < 0:\n                raise ValueError(\"Exponent must be non-negative\")\n            left = left ** right\n        return left\n\n    # unary minus (may repeat) then primary\n    def parse_unary(self):\n        if self._peek_kind() == \"-\":\n            self._advance()\n            return -self.parse_unary()\n        return self.parse_primary()\n\n    def parse_primary(self):\n        tok = self._peek()\n        if tok is None:\n            raise ValueError(\"Unexpected end of expression\")\n        if tok.kind == \"NUM\":\n            self._advance()\n            return tok.value\n        if tok.kind == \"(\":\n            self._advance()\n            value = self.parse_at()\n            self._expect(\")\")\n            return value\n        raise ValueError(f\"Unexpected token {tok.kind!r}\")\n\n\ndef evaluate(expr: str) -> int:\n    tokens = _tokenize(expr)\n    if not tokens:\n        raise ValueError(\"Empty expression\")\n    parser = _Parser(tokens)\n    result = parser.parse_at()\n    if parser.pos != len(tokens):\n        raise ValueError(\"Unexpected trailing tokens in expression\")\n    return result\n```",
+  "stop_reason": "end_turn",
+  "session_id": "bd1de40c-7433-49ee-bd7b-413003a8a21a",
+  "total_cost_usd": 0.2769627,
+  "usage": {
+    "input_tokens": 7,
+    "cache_creation_input_tokens": 19058,
+    "cache_read_input_tokens": 119714,
+    "output_tokens": 11304,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 19058
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-5": {
+      "inputTokens": 7,
+      "outputTokens": 11304,
+      "cacheReadInputTokens": 119714,
+      "cacheCreationInputTokens": 19058,
+      "webSearchRequests": 0,
+      "costUSD": 0.2769627,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "9175d4c5-74b1-491c-ae9e-6a3cc8dfef6a"
+}

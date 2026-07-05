@@ -1,0 +1,82 @@
+```python
+"""Recurring event expansion with DST-aware local-to-UTC resolution."""
+
+from datetime import datetime, timedelta, date, time
+from zoneinfo import ZoneInfo
+
+
+def _resolve(local_dt_naive: datetime, tz: ZoneInfo) -> datetime:
+    """Resolve a naive local wall-clock datetime to an aware UTC datetime.
+
+    Rules:
+      - exists once: use it
+      - gap (does not exist): shift forward by gap size
+      - ambiguous (overlap): use the earlier instant (pre-transition offset)
+    """
+    # Aware interpretations using fold=0 and fold=1
+    dt0 = local_dt_naive.replace(tzinfo=tz, fold=0)
+    dt1 = local_dt_naive.replace(tzinfo=tz, fold=1)
+
+    off0 = dt0.utcoffset()
+    off1 = dt1.utcoffset()
+
+    if off0 == off1:
+        # Unambiguous, existing time.
+        return dt0.astimezone(ZoneInfo("UTC"))
+
+    # off0 != off1 means we're near a transition.
+    # Determine whether this wall time actually exists.
+    # For an existing time, converting the aware value back to the same wall
+    # clock is consistent. For a gap, it won't round-trip.
+
+    # Check gap: a wall time is in a gap if neither fold interpretation, when
+    # converted to UTC and back, yields the original naive wall time.
+    utc = ZoneInfo("UTC")
+
+    def roundtrips(dt_aware):
+        back = dt_aware.astimezone(utc).astimezone(tz)
+        return back.replace(tzinfo=None) == local_dt_naive
+
+    exists0 = roundtrips(dt0)
+    exists1 = roundtrips(dt1)
+
+    if exists0 or exists1:
+        # Ambiguous (overlap): use the earlier instant.
+        # The earlier instant has the larger UTC offset (pre-transition).
+        # Instant = local - offset; larger offset => earlier instant.
+        if off0 >= off1:
+            chosen = dt0
+        else:
+            chosen = dt1
+        return chosen.astimezone(utc)
+
+    # Gap: the wall time does not exist. Shift forward by the gap size.
+    # Gap size is the difference between the pre- and post-transition offsets.
+    gap = off0 - off1  # typically +1 hour going into a spring-forward
+    if gap < timedelta(0):
+        gap = -gap
+    shifted = local_dt_naive + gap
+    # Re-resolve the shifted time (should now exist unambiguously).
+    return _resolve(shifted, tz)
+
+
+def expand(start_date: str, every_days: int, local_time: str,
+           tz_name: str, count: int) -> list[str]:
+    tz = ZoneInfo(tz_name)
+    utc = ZoneInfo("UTC")
+
+    y, m, d = map(int, start_date.split("-"))
+    start = date(y, m, d)
+
+    hh, mm = map(int, local_time.split(":"))
+    wall = time(hour=hh, minute=mm)
+
+    results = []
+    for k in range(count):
+        occ_date = start + timedelta(days=k * every_days)
+        naive = datetime.combine(occ_date, wall)
+        utc_dt = _resolve(naive, tz).astimezone(utc)
+        results.append(utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+    return results
+```

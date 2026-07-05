@@ -1,0 +1,175 @@
+```python
+"""
+Calc-26 language evaluator.
+
+Grammar (lowest to highest precedence):
+    1. @            (midpoint)         left-associative
+    2. + -                              left-associative
+    3. * /                              left-associative
+    4. ^            (power)            right-associative
+    unary minus (prefix, repeatable)
+
+Unary minus may appear anywhere an expression may start, EXCEPT it may not
+appear directly after a '^' token (i.e. as the very first token of the
+right-hand operand of '^').  It may be used after '(' or at the very start
+of the whole expression, or right after +, -, *, /, @.
+
+Semantics:
+    a @ b   = floor((a + b) / 2)
+    a / b   = floor division (Python `//`); division by zero -> ZeroDivisionError
+    a ^ b   = a ** b ; if b < 0 -> ValueError
+
+Any malformed input raises ValueError.
+"""
+
+
+def _tokenize(s):
+    tokens = []
+    i, n = 0, len(s)
+    while i < n:
+        c = s[i]
+        if c.isspace():
+            i += 1
+            continue
+        if c.isdigit():
+            j = i
+            while j < n and s[j].isdigit():
+                j += 1
+            tokens.append(('NUM', int(s[i:j])))
+            i = j
+            continue
+        if c == '(':
+            tokens.append(('LPAREN', '('))
+            i += 1
+            continue
+        if c == ')':
+            tokens.append(('RPAREN', ')'))
+            i += 1
+            continue
+        if c in '+-*/^@':
+            tokens.append(('OP', c))
+            i += 1
+            continue
+        raise ValueError("Unexpected character: %r" % c)
+    return tokens
+
+
+class _Parser:
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.pos = 0
+
+    def peek(self):
+        if self.pos < len(self.tokens):
+            return self.tokens[self.pos]
+        return None
+
+    def advance(self):
+        tok = self.peek()
+        if tok is None:
+            raise ValueError("Unexpected end of input")
+        self.pos += 1
+        return tok
+
+    def parse(self):
+        if not self.tokens:
+            raise ValueError("Empty expression")
+        result = self.parse_at()
+        if self.pos != len(self.tokens):
+            raise ValueError("Unexpected trailing tokens")
+        return result
+
+    # Level 1: @ (lowest precedence), left-assoc
+    def parse_at(self):
+        left = self.parse_addsub()
+        while True:
+            tok = self.peek()
+            if tok and tok[0] == 'OP' and tok[1] == '@':
+                self.advance()
+                right = self.parse_addsub()
+                left = (left + right) // 2
+            else:
+                break
+        return left
+
+    # Level 2: + -, left-assoc
+    def parse_addsub(self):
+        left = self.parse_muldiv()
+        while True:
+            tok = self.peek()
+            if tok and tok[0] == 'OP' and tok[1] in ('+', '-'):
+                op = self.advance()[1]
+                right = self.parse_muldiv()
+                if op == '+':
+                    left = left + right
+                else:
+                    left = left - right
+            else:
+                break
+        return left
+
+    # Level 3: * /, left-assoc
+    def parse_muldiv(self):
+        left = self.parse_pow()
+        while True:
+            tok = self.peek()
+            if tok and tok[0] == 'OP' and tok[1] in ('*', '/'):
+                op = self.advance()[1]
+                right = self.parse_pow()
+                if op == '*':
+                    left = left * right
+                else:
+                    if right == 0:
+                        raise ZeroDivisionError("division by zero")
+                    left = left // right
+            else:
+                break
+        return left
+
+    # Level 4: ^, right-assoc
+    def parse_pow(self, allow_leading_minus=True):
+        left = self.parse_unary(allow_leading_minus)
+        tok = self.peek()
+        if tok and tok[0] == 'OP' and tok[1] == '^':
+            self.advance()
+            right = self.parse_pow(allow_leading_minus=False)
+            if right < 0:
+                raise ValueError("Negative exponent not allowed")
+            left = left ** right
+        return left
+
+    def parse_unary(self, allow_minus):
+        tok = self.peek()
+        if tok and tok[0] == 'OP' and tok[1] == '-':
+            if not allow_minus:
+                raise ValueError("Unary minus not allowed directly after '^'")
+            self.advance()
+            val = self.parse_unary(True)
+            return -val
+        return self.parse_primary()
+
+    def parse_primary(self):
+        tok = self.peek()
+        if tok is None:
+            raise ValueError("Unexpected end of input")
+        if tok[0] == 'NUM':
+            self.advance()
+            return tok[1]
+        if tok[0] == 'LPAREN':
+            self.advance()
+            val = self.parse_at()
+            tok2 = self.peek()
+            if not (tok2 and tok2[0] == 'RPAREN'):
+                raise ValueError("Expected closing parenthesis")
+            self.advance()
+            return val
+        raise ValueError("Unexpected token: %r" % (tok,))
+
+
+def evaluate(expr: str) -> int:
+    if not isinstance(expr, str):
+        raise ValueError("Expression must be a string")
+    tokens = _tokenize(expr)
+    parser = _Parser(tokens)
+    return parser.parse()
+```

@@ -1,0 +1,137 @@
+```python
+"""Deterministic greedy DAG scheduler for identical workers."""
+
+from __future__ import annotations
+
+
+def schedule(
+    tasks: dict[str, tuple[int, list[str]]], workers: int
+) -> dict[str, tuple[int, int]]:
+    if workers < 1:
+        raise ValueError("workers must be >= 1")
+
+    # Validate references.
+    for tid, (duration, deps) in tasks.items():
+        if duration <= 0:
+            raise ValueError(f"task {tid!r} has non-positive duration")
+        for d in deps:
+            if d not in tasks:
+                raise ValueError(f"task {tid!r} references unknown dependency {d!r}")
+
+    # Detect cycles via DFS.
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = {tid: WHITE for tid in tasks}
+
+    def dfs(node: str) -> None:
+        color[node] = GRAY
+        for dep in tasks[node][1]:
+            if color[dep] == GRAY:
+                raise ValueError("dependency graph has a cycle")
+            if color[dep] == WHITE:
+                dfs(dep)
+        color[node] = BLACK
+
+    for tid in tasks:
+        if color[tid] == WHITE:
+            dfs(tid)
+
+    result: dict[str, tuple[int, int]] = {}
+    finish_time: dict[str, int] = {}
+    started: set[str] = set()
+
+    # Worker availability: each worker's next-free time.
+    worker_free = [0] * workers
+
+    # Number of unfinished dependencies could be tracked, but we recompute
+    # readiness based on finished deps.
+
+    remaining = set(tasks.keys())
+
+    def ready_time(tid: str) -> int | None:
+        """Return the time at which tid becomes ready, or None if not yet
+        all deps are finished."""
+        deps = tasks[tid][1]
+        t = 0
+        for d in deps:
+            if d not in finish_time:
+                return None
+            t = max(t, finish_time[d])
+        return t
+
+    current_time = 0
+
+    while remaining:
+        # Determine which tasks are ready at current_time (deps finished by now).
+        # A task is assignable now if all deps finished and its ready_time <= current_time.
+        while True:
+            # Find idle workers at current_time.
+            idle_workers = [
+                i for i in range(workers) if worker_free[i] <= current_time
+            ]
+            if not idle_workers:
+                break
+
+            # Ready & unstarted tasks whose ready_time <= current_time.
+            candidates = []
+            for tid in remaining:
+                if tid in started:
+                    continue
+                rt = ready_time(tid)
+                if rt is not None and rt <= current_time:
+                    candidates.append(tid)
+
+            if not candidates:
+                break
+
+            # Pick largest duration, tie-break smallest task_id.
+            candidates.sort(key=lambda t: (-tasks[t][0], t))
+            chosen = candidates[0]
+            w = min(idle_workers)
+
+            result[chosen] = (current_time, w)
+            finish_time[chosen] = current_time + tasks[chosen][0]
+            worker_free[w] = current_time + tasks[chosen][0]
+            started.add(chosen)
+
+        # Remove finished tasks from remaining (those with finish_time <= ... )
+        # Actually a task is "done" simulation-wise once started; but remaining
+        # should track tasks not yet fully scheduled. We keep them until finished
+        # to allow dependents to become ready. Remove finished ones.
+        for tid in list(remaining):
+            if tid in finish_time and finish_time[tid] <= current_time:
+                remaining.discard(tid)
+
+        if not remaining:
+            break
+
+        # Advance time to next event: earliest future finish of a running task,
+        # or earliest future ready-time of an unstarted task.
+        next_times = []
+
+        for tid in remaining:
+            if tid in started:
+                ft = finish_time[tid]
+                if ft > current_time:
+                    next_times.append(ft)
+            else:
+                rt = ready_time(tid)
+                if rt is not None and rt > current_time:
+                    next_times.append(rt)
+
+        if not next_times:
+            # No future event but unstarted tasks remain -> they depend on
+            # currently running tasks; advance to their finishes.
+            running_finishes = [
+                finish_time[t]
+                for t in started
+                if finish_time[t] > current_time
+            ]
+            if not running_finishes:
+                # Nothing can progress (shouldn't happen with valid DAG).
+                break
+            current_time = min(running_finishes)
+        else:
+            current_time = min(next_times)
+
+    return result
+```

@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 104175,
+  "duration_api_ms": 103848,
+  "ttft_ms": 63926,
+  "ttft_stream_ms": 1357,
+  "time_to_request_ms": 35,
+  "num_turns": 3,
+  "result": "All tests pass, including the example, tie-breaking, cycle/unknown/self-loop errors, empty input, duplicate deps, and simultaneous finish-and-start.\n\n```python\n\"\"\"Deterministic greedy scheduler for a DAG of tasks on identical workers.\"\"\"\n\nfrom collections import deque\n\n\ndef schedule(tasks, workers):\n    \"\"\"Schedule a DAG of tasks on `workers` identical, non-preemptive workers.\n\n    tasks maps task_id -> (duration, deps). Returns a dict mapping every\n    task_id -> (start_time, worker_index) following the exact greedy policy.\n\n    Raises ValueError on cycles or references to unknown task ids.\n    \"\"\"\n    if not isinstance(workers, int) or workers < 1:\n        raise ValueError(\"workers must be an integer >= 1\")\n\n    # Validate references to unknown task ids.\n    for tid, val in tasks.items():\n        dur, deps = val\n        for d in deps:\n            if d not in tasks:\n                raise ValueError(\"unknown task id in dependencies: %r\" % (d,))\n\n    # Distinct dependency sets and reverse (dependents) mapping.\n    dep_sets = {tid: set(tasks[tid][1]) for tid in tasks}\n    dependents = {tid: [] for tid in tasks}\n    for tid, deps in dep_sets.items():\n        for d in deps:\n            dependents[d].append(tid)\n\n    # Cycle detection via Kahn's algorithm.\n    indeg = {tid: len(dep_sets[tid]) for tid in tasks}\n    q = deque(t for t in tasks if indeg[t] == 0)\n    seen = 0\n    while q:\n        n = q.popleft()\n        seen += 1\n        for m in dependents[n]:\n            indeg[m] -= 1\n            if indeg[m] == 0:\n                q.append(m)\n    if seen != len(tasks):\n        raise ValueError(\"dependency graph contains a cycle\")\n\n    # --- Simulation ---\n    total = len(tasks)\n    result = {}\n    remaining = {tid: set(dep_sets[tid]) for tid in tasks}\n    started = set()\n    ready = set(t for t in tasks if not remaining[t])  # ready at time 0\n    busy_until = [0] * workers          # worker i is idle at time t if busy_until[i] <= t\n    running = []                        # list of (finish_time, worker_index, task_id)\n\n    t = 0\n    while len(result) < total:\n        # Process tasks finishing at time t: free workers, unlock dependents.\n        still = []\n        for f, w, tid in running:\n            if f == t:\n                for dep in dependents[tid]:\n                    rem = remaining[dep]\n                    rem.discard(tid)\n                    if not rem and dep not in started:\n                        ready.add(dep)\n            else:\n                still.append((f, w, tid))\n        running = still\n\n        # Greedily assign ready tasks to idle workers.\n        while ready:\n            idle = [i for i in range(workers) if busy_until[i] <= t]\n            if not idle:\n                break\n            # Largest duration, ties broken by smallest task_id.\n            best = min(ready, key=lambda x: (-tasks[x][0], x))\n            w = min(idle)\n            dur = tasks[best][0]\n            result[best] = (t, w)\n            started.add(best)\n            ready.discard(best)\n            busy_until[w] = t + dur\n            running.append((t + dur, w, best))\n\n        if len(result) == total:\n            break\n\n        # Advance to the next event (a running task finishing).\n        future = [f for f, _w, _tid in running if f > t]\n        if not future:\n            # No running tasks yet work remains: only possible on an invalid\n            # graph, already ruled out by cycle detection.\n            break\n        t = min(future)\n\n    return result\n```\n\n`solution.py` is written and verified in the current directory.",
+  "stop_reason": "end_turn",
+  "session_id": "a3ddcb99-569b-4ed6-99a2-e42e24b41f1d",
+  "total_cost_usd": 0.32394825000000005,
+  "usage": {
+    "input_tokens": 2361,
+    "cache_creation_input_tokens": 12319,
+    "cache_read_input_tokens": 51799,
+    "output_tokens": 8370,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 12319
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-opus-4-8": {
+      "inputTokens": 2361,
+      "outputTokens": 8370,
+      "cacheReadInputTokens": 51799,
+      "cacheCreationInputTokens": 12319,
+      "webSearchRequests": 0,
+      "costUSD": 0.32394825000000005,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "e3103ba9-2870-4f3a-98bf-9777c26be157"
+}

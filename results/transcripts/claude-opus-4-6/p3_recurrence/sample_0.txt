@@ -1,0 +1,102 @@
+
+
+```python
+from datetime import datetime, timedelta, date, time
+from zoneinfo import ZoneInfo
+
+
+def expand(start_date: str, every_days: int, local_time: str, tz_name: str, count: int) -> list[str]:
+    tz = ZoneInfo(tz_name)
+    utc = ZoneInfo("UTC")
+    
+    sd = date.fromisoformat(start_date)
+    hour, minute = map(int, local_time.split(":"))
+    lt = time(hour, minute)
+    
+    results = []
+    
+    for k in range(count):
+        local_date = sd + timedelta(days=k * every_days)
+        naive_dt = datetime.combine(local_date, lt)
+        
+        # We need to handle three cases:
+        # 1. Normal: wall time exists exactly once
+        # 2. Gap (spring-forward): wall time doesn't exist
+        # 3. Ambiguous (fall-back): wall time exists twice
+        
+        # Try to determine if the time is in a gap or ambiguous
+        # by using fold=0 and fold=1
+        
+        dt_fold0 = naive_dt.replace(tzinfo=tz, fold=0)
+        dt_fold1 = naive_dt.replace(tzinfo=tz, fold=1)
+        
+        utc_fold0 = dt_fold0.astimezone(utc)
+        utc_fold1 = dt_fold1.astimezone(utc)
+        
+        # Convert back to local to check what wall time we actually get
+        local_back_fold0 = utc_fold0.astimezone(tz)
+        local_back_fold1 = utc_fold1.astimezone(tz)
+        
+        wall0 = local_back_fold0.replace(tzinfo=None)
+        wall1 = local_back_fold1.replace(tzinfo=None)
+        
+        if wall0 == naive_dt and wall1 == naive_dt:
+            # Either normal (both give same UTC) or ambiguous (different UTC)
+            if utc_fold0 == utc_fold1:
+                # Normal case: exists exactly once
+                result_utc = utc_fold0
+            else:
+                # Ambiguous: use the EARLIER instant (smaller UTC time)
+                # fold=0 gives the pre-transition (earlier) offset, which is the earlier instant
+                result_utc = min(utc_fold0, utc_fold1)
+        else:
+            # Gap: the wall time doesn't exist
+            # At least one of fold0/fold1 will map to a different wall time
+            # We need to shift forward by the gap size
+            
+            # With fold=0, for a gap time, Python/zoneinfo will typically
+            # use the pre-transition offset, resulting in a UTC time that
+            # when converted back gives post-transition wall time.
+            # With fold=1, it uses post-transition offset.
+            
+            # For a spring-forward gap (e.g., 2:00 -> 3:00):
+            # If we request 2:30:
+            # fold=0: uses pre-transition offset (e.g., -5), gives UTC 7:30, 
+            #          which converts back to 3:30 EDT (post-transition)
+            # fold=1: uses post-transition offset (e.g., -4), gives UTC 6:30,
+            #          which converts back to 2:30 EST... wait no, 
+            #          6:30 UTC = 2:30 EDT? No...
+            
+            # Actually let's just compute the gap and shift forward.
+            # The gap size = difference between the two wall times we get back
+            # We want to shift naive_dt forward by the gap.
+            
+            # fold=0 uses the "earlier" offset (pre-transition), so for a gap time
+            # the UTC result, when converted back, gives the post-transition wall time.
+            # That post-transition wall time IS the correct shifted time.
+            
+            # Actually, let's be more careful. The rule says shift forward by gap size.
+            # The shifted time should be naive_dt + gap_size, applied in post-transition offset.
+            
+            # For fold=0 with a gap time: the result is as if the pre-transition offset applied,
+            # which maps to a post-transition wall time = naive_dt + gap_size. 
+            # This is exactly what we want.
+            
+            # But let's verify: fold=1 uses post-transition offset on the gap time,
+            # giving UTC = naive_dt - post_offset. Converting back: naive_dt (but it's in the gap,
+            # so it shouldn't round-trip... actually with fold=1 it does in some implementations)
+            
+            # Safest approach: compute the shifted wall time explicitly
+            # The gap is between two wall times. Let's find the actual valid post-gap time.
+            
+            # Use fold=0: this gives us UTC using pre-transition offset
+            # Converting that UTC back to local gives us the post-gap wall time
+            # That post-gap wall time = naive_dt + gap_size (effectively)
+            # So we just use utc_fold0 as our result
+            
+            result_utc = utc_fold0
+        
+        results.append(result_utc.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    
+    return results
+```

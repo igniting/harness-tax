@@ -1,0 +1,47 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": true,
+  "api_error_status": null,
+  "duration_ms": 63716,
+  "duration_api_ms": 63671,
+  "num_turns": 2,
+  "result": "API Error: Connection closed mid-response. The response above may be incomplete.",
+  "stop_reason": "stop_sequence",
+  "session_id": "7a37f16d-7dcf-4e41-a63d-e5692a995db7",
+  "total_cost_usd": 0.15306524999999999,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 6352,
+    "cache_read_input_tokens": 14318,
+    "output_tokens": 3051,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 6352
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-opus-4-6": {
+      "inputTokens": 3,
+      "outputTokens": 3052,
+      "cacheReadInputTokens": 34988,
+      "cacheCreationInputTokens": 9481,
+      "webSearchRequests": 0,
+      "costUSD": 0.15306524999999999,
+      "contextWindow": 200000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "b2945735-1a81-48f2-83e3-9a5839fe0510"
+}

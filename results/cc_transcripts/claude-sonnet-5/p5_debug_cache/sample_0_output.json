@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 34487,
+  "duration_api_ms": 34181,
+  "ttft_ms": 10658,
+  "ttft_stream_ms": 2053,
+  "time_to_request_ms": 41,
+  "num_turns": 4,
+  "result": "All tests pass. Here's the fixed module:\n\n```python\nfrom collections import OrderedDict\n\n\nclass TTLCache:\n    def __init__(self, capacity):\n        if capacity <= 0:\n            raise ValueError(\"capacity must be positive\")\n        self.capacity = capacity\n        self._d = OrderedDict()   # key -> (value, expires_at)\n        self._hits = 0\n        self._misses = 0\n\n    def put(self, key, value, now, ttl):\n        if key in self._d:\n            self._d[key] = (value, now + ttl)\n            self._d.move_to_end(key, last=True)\n            return\n        if len(self._d) >= self.capacity:\n            for k in list(self._d):\n                _, exp = self._d[k]\n                if exp <= now:\n                    del self._d[k]\n            if len(self._d) >= self.capacity:\n                self._d.popitem(last=False)\n        self._d[key] = (value, now + ttl)\n\n    def get(self, key, now):\n        if key not in self._d:\n            self._misses += 1\n            return None\n        value, expires_at = self._d[key]\n        if now >= expires_at:\n            del self._d[key]\n            self._misses += 1\n            return None\n        self._hits += 1\n        self._d.move_to_end(key, last=True)\n        return value\n\n    def stats(self):\n        return (self._hits, self._misses)\n\n    def __len__(self):\n        return len(self._d)\n```\n\nBugs fixed: recency direction on `put`-overwrite (was moving to front instead of end), the expired-eviction condition was inverted (deleted live entries instead of expired ones), LRU eviction popped the most-recent item instead of the least-recent, expiry comparison used `>` instead of the inclusive `>=`, and an expired `get` counted a hit and left the stale entry in place instead of counting a miss and deleting it.",
+  "stop_reason": "end_turn",
+  "session_id": "2373a604-5641-4947-a87c-a465b2a7989f",
+  "total_cost_usd": 0.12796005,
+  "usage": {
+    "input_tokens": 7,
+    "cache_creation_input_tokens": 11657,
+    "cache_read_input_tokens": 107401,
+    "output_tokens": 3467,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 11657
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-5": {
+      "inputTokens": 7,
+      "outputTokens": 3467,
+      "cacheReadInputTokens": 107401,
+      "cacheCreationInputTokens": 11657,
+      "webSearchRequests": 0,
+      "costUSD": 0.12796005,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "a034bbd3-f4a3-43b0-9dff-bca15f41676c"
+}

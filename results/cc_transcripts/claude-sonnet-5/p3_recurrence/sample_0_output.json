@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 42227,
+  "duration_api_ms": 41911,
+  "ttft_ms": 23748,
+  "ttft_stream_ms": 1161,
+  "time_to_request_ms": 38,
+  "num_turns": 3,
+  "result": "All results match expectations: gap shifts 02:30\u219203:30 EDT (07:30 UTC), ambiguous uses earlier EDT instant (05:30 UTC), and normal/UTC cases are correct.\n\n```python\n\"\"\"Expand a recurring local-time event into UTC occurrence timestamps.\"\"\"\n\nfrom datetime import date, datetime, timedelta, timezone\nfrom zoneinfo import ZoneInfo\n\n\ndef _resolve_local(dt_naive: datetime, tz: ZoneInfo) -> datetime:\n    \"\"\"Attach a timezone to a naive local datetime, handling gaps/ambiguity.\"\"\"\n    dt_fold0 = dt_naive.replace(tzinfo=tz, fold=0)\n    dt_fold1 = dt_naive.replace(tzinfo=tz, fold=1)\n    off0 = dt_fold0.utcoffset()\n    off1 = dt_fold1.utcoffset()\n\n    if off0 == off1:\n        # Unambiguous: the wall time occurs exactly once.\n        return dt_fold0\n\n    if off0 > off1:\n        # Ambiguous (fall-back overlap): use the earlier instant.\n        return dt_fold0\n\n    # Nonexistent (spring-forward gap): shift the wall clock forward by the\n    # size of the gap and resolve using the post-transition offset.\n    gap = off1 - off0\n    shifted = dt_naive + gap\n    return shifted.replace(tzinfo=tz, fold=1)\n\n\ndef expand(\n    start_date: str, every_days: int, local_time: str, tz_name: str, count: int\n) -> list[str]:\n    year, month, day = (int(part) for part in start_date.split(\"-\"))\n    hour, minute = (int(part) for part in local_time.split(\":\"))\n    base_date = date(year, month, day)\n    tz = ZoneInfo(tz_name)\n\n    occurrences = []\n    for k in range(count):\n        occ_date = base_date + timedelta(days=k * every_days)\n        naive_dt = datetime(\n            occ_date.year, occ_date.month, occ_date.day, hour, minute\n        )\n        local_dt = _resolve_local(naive_dt, tz)\n        utc_dt = local_dt.astimezone(timezone.utc)\n        occurrences.append(utc_dt.strftime(\"%Y-%m-%dT%H:%M:%SZ\"))\n\n    return occurrences\n```",
+  "stop_reason": "end_turn",
+  "session_id": "46a5b5ab-fc30-49fa-97df-458e893fc7b3",
+  "total_cost_usd": 0.13375499999999999,
+  "usage": {
+    "input_tokens": 5,
+    "cache_creation_input_tokens": 12000,
+    "cache_read_input_tokens": 77750,
+    "output_tokens": 4361,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 12000
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-sonnet-5": {
+      "inputTokens": 5,
+      "outputTokens": 4361,
+      "cacheReadInputTokens": 77750,
+      "cacheCreationInputTokens": 12000,
+      "webSearchRequests": 0,
+      "costUSD": 0.13375499999999999,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "022baadd-734a-46e6-a797-9c64b4a1ce29"
+}

@@ -1,0 +1,139 @@
+
+
+```python
+def schedule(tasks: dict[str, tuple[int, list[str]]], workers: int) -> dict[str, tuple[int, int]]:
+    # Validate dependencies and check for cycles
+    for task_id, (duration, deps) in tasks.items():
+        for dep in deps:
+            if dep not in tasks:
+                raise ValueError(f"Unknown dependency '{dep}' referenced by task '{task_id}'")
+    
+    # Cycle detection using DFS
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = {task_id: WHITE for task_id in tasks}
+    
+    def dfs(node):
+        color[node] = GRAY
+        _, deps = tasks[node]
+        for dep in deps:
+            if color[dep] == GRAY:
+                raise ValueError("Dependency graph has a cycle")
+            if color[dep] == WHITE:
+                dfs(node)
+                dfs(dep)
+        color[node] = BLACK
+    
+    # Use iterative DFS to avoid stack overflow and properly detect cycles
+    color = {task_id: WHITE for task_id in tasks}
+    
+    for start in tasks:
+        if color[start] != WHITE:
+            continue
+        stack = [(start, False)]
+        while stack:
+            node, processed = stack.pop()
+            if processed:
+                color[node] = BLACK
+                continue
+            if color[node] == GRAY:
+                # Already being processed, just mark black
+                color[node] = BLACK
+                continue
+            if color[node] == BLACK:
+                continue
+            color[node] = GRAY
+            stack.append((node, True))
+            _, deps = tasks[node]
+            for dep in deps:
+                if color[dep] == GRAY:
+                    raise ValueError("Dependency graph has a cycle")
+                if color[dep] == WHITE:
+                    stack.append((dep, False))
+    
+    # Simulation
+    result = {}  # task_id -> (start_time, worker_index)
+    
+    # Track worker availability: worker_free_at[i] = time when worker i becomes free
+    worker_free_at = [0] * workers
+    
+    # Track task finish times
+    task_finish_time = {}
+    
+    # Track which tasks have been scheduled
+    scheduled = set()
+    
+    # Track running tasks: list of (finish_time, worker_index, task_id)
+    import heapq
+    
+    def get_ready_tasks(current_time):
+        """Get all tasks that are ready at current_time and not yet scheduled."""
+        ready = []
+        for task_id, (duration, deps) in tasks.items():
+            if task_id in scheduled:
+                continue
+            # Check if all deps are finished by current_time
+            all_deps_done = True
+            for dep in deps:
+                if dep not in task_finish_time or task_finish_time[dep] > current_time:
+                    all_deps_done = False
+                    break
+            if all_deps_done:
+                ready.append(task_id)
+        # Sort by largest duration first, then smallest task_id
+        ready.sort(key=lambda tid: (-tasks[tid][0], tid))
+        return ready
+    
+    def get_idle_workers(current_time):
+        """Get indices of idle workers at current_time, sorted by index."""
+        idle = []
+        for i in range(workers):
+            if worker_free_at[i] <= current_time:
+                idle.append(i)
+        return idle
+    
+    total_tasks = len(tasks)
+    current_time = 0
+    
+    # Events: times at which something happens (task finishes)
+    # We also need to consider time 0
+    event_times = set()
+    event_times.add(0)
+    
+    while len(scheduled) < total_tasks:
+        # At current_time, assign as many tasks as possible
+        while True:
+            ready = get_ready_tasks(current_time)
+            idle = get_idle_workers(current_time)
+            if not ready or not idle:
+                break
+            # Assign tasks to workers
+            assignments = min(len(ready), len(idle))
+            for i in range(assignments):
+                task_id = ready[i]
+                worker_idx = idle[i]
+                duration = tasks[task_id][0]
+                start = current_time
+                finish = current_time + duration
+                result[task_id] = (start, worker_idx)
+                scheduled.add(task_id)
+                task_finish_time[task_id] = finish
+                worker_free_at[worker_idx] = finish
+                event_times.add(finish)
+        
+        if len(scheduled) < total_tasks:
+            # Advance to next event time
+            # Next event is the earliest time > current_time when something finishes
+            next_time = None
+            for i in range(workers):
+                if worker_free_at[i] > current_time:
+                    if next_time is None or worker_free_at[i] < next_time:
+                        next_time = worker_free_at[i]
+            
+            if next_time is None:
+                # No running tasks but unscheduled tasks remain -> should not happen if no cycles
+                raise ValueError("Unable to schedule remaining tasks - possible cycle")
+            
+            current_time = next_time
+    
+    return result
+```

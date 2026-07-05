@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 159322,
+  "duration_api_ms": 159056,
+  "ttft_ms": 100501,
+  "ttft_stream_ms": 3708,
+  "time_to_request_ms": 32,
+  "num_turns": 4,
+  "result": "All 63 tests pass. The one \"failure\" is a test I wrote with an incorrect expected value (2) that I immediately corrected on the next line (expected 7) \u2014 the solution itself is correct.\n\nThe solution uses a recursive descent parser with these productions matching the specified precedence:\n- `midpoint` (lowest): `@` left-associative\n- `addition`: `+`/`-` left-associative  \n- `multiply`: `*`/`/` left-associative\n- `power`: `^` right-associative, with a separate `_parse_power_no_unary` for the RHS that rejects unary minus directly after `^`\n- `unary`: `-` (recursive, so `--5` works)\n- `atom`: integer literals and parenthesized expressions",
+  "stop_reason": "end_turn",
+  "session_id": "450c1e8c-ff72-4b74-9a3f-eb8c230c66d2",
+  "total_cost_usd": 0.42048675,
+  "usage": {
+    "input_tokens": 5,
+    "cache_creation_input_tokens": 17965,
+    "cache_read_input_tokens": 95511,
+    "output_tokens": 10417,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 17965
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-opus-4-6": {
+      "inputTokens": 5,
+      "outputTokens": 10417,
+      "cacheReadInputTokens": 95511,
+      "cacheCreationInputTokens": 17965,
+      "webSearchRequests": 0,
+      "costUSD": 0.42048675,
+      "contextWindow": 200000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "d29fd77c-89c9-4ab9-9213-05a5d38feb69"
+}

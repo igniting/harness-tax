@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 100828,
+  "duration_api_ms": 100500,
+  "ttft_ms": 37070,
+  "ttft_stream_ms": 4251,
+  "time_to_request_ms": 37,
+  "num_turns": 5,
+  "result": "All 17 tests pass. The solution uses deques with running sums for O(evicted) amortized cost per call, correctly implements the half-open window `(ts - window_ms, ts]`, and preserves recorded weights across re-registration. `solution.py` is complete.",
+  "stop_reason": "end_turn",
+  "session_id": "66373d6d-595f-44ab-a07f-a41e283dca95",
+  "total_cost_usd": 0.27595850000000005,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 12346,
+    "cache_read_input_tokens": 111682,
+    "output_tokens": 5717,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 12346
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-opus-4-6": {
+      "inputTokens": 6,
+      "outputTokens": 5717,
+      "cacheReadInputTokens": 111682,
+      "cacheCreationInputTokens": 12346,
+      "webSearchRequests": 0,
+      "costUSD": 0.27595850000000005,
+      "contextWindow": 200000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "abf77972-93f7-4a08-bb2f-12571e35bc53"
+}

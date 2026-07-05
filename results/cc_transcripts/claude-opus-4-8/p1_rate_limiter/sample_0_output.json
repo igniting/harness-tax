@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 37251,
+  "duration_api_ms": 36953,
+  "ttft_ms": 5280,
+  "ttft_stream_ms": 1285,
+  "time_to_request_ms": 40,
+  "num_turns": 3,
+  "result": "All tests pass. `solution.py` is complete and correct.\n\n```python\n\"\"\"Sliding-window rate limiter with per-key and global limits.\"\"\"\n\nfrom collections import deque\n\n\nclass RateLimiter:\n    def __init__(self, global_limit: int, window_ms: int):\n        self.global_limit = global_limit\n        self.window_ms = window_ms\n        # per-key config\n        self._limit: dict[str, int] = {}\n        self._weight: dict[str, int] = {}\n        # per-key deque of (ts, weight) and running sum of weights\n        self._events: dict[str, deque] = {}\n        self._key_sum: dict[str, int] = {}\n        # global deque of (ts, weight) and running sum\n        self._global: deque = deque()\n        self._global_sum = 0\n\n    def set_key_limit(self, key: str, limit: int, weight: int = 1) -> None:\n        self._limit[key] = limit\n        self._weight[key] = weight\n        if key not in self._events:\n            self._events[key] = deque()\n            self._key_sum[key] = 0\n\n    def _evict_global(self, ts: int) -> None:\n        cutoff = ts - self.window_ms  # events with t <= cutoff are expired\n        g = self._global\n        while g and g[0][0] <= cutoff:\n            _, w = g.popleft()\n            self._global_sum -= w\n\n    def _evict_key(self, key: str, ts: int) -> None:\n        cutoff = ts - self.window_ms\n        dq = self._events[key]\n        while dq and dq[0][0] <= cutoff:\n            _, w = dq.popleft()\n            self._key_sum[key] -= w\n\n    def allow(self, key: str, ts: int) -> bool:\n        if key not in self._limit:\n            return False\n        self._evict_global(ts)\n        self._evict_key(key, ts)\n        w = self._weight[key]\n        if self._key_sum[key] + w > self._limit[key]:\n            return False\n        if self._global_sum + w > self.global_limit:\n            return False\n        self._events[key].append((ts, w))\n        self._key_sum[key] += w\n        self._global.append((ts, w))\n        self._global_sum += w\n        return True\n\n    def usage(self, ts: int) -> dict[str, int]:\n        result: dict[str, int] = {}\n        for key in self._limit:\n            self._evict_key(key, ts)\n            result[key] = self._key_sum[key]\n        return result\n```\n\nKey design points:\n- **Eviction** relies on the non-decreasing timestamp guarantee \u2014 expired events sit at the front of each deque, so popping from the left is amortized O(1) per event (better than O(history) per call).\n- **Window boundary** `(ts - window_ms, ts]`: cutoff is `ts - window_ms`; events with `t <= cutoff` are evicted, so `t == cutoff` expires and `t == cutoff + 1` survives.\n- **Weight snapshotting**: events store the weight they were admitted with, so re-registration only affects future requests.\n- **Rejected requests** record nothing, consuming no quota per-key or globally.",
+  "stop_reason": "end_turn",
+  "session_id": "03561a78-0557-4f38-9a26-c628e2a20e94",
+  "total_cost_usd": 0.23220449999999998,
+  "usage": {
+    "input_tokens": 2361,
+    "cache_creation_input_tokens": 19864,
+    "cache_read_input_tokens": 34249,
+    "output_tokens": 3165,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 19864
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-opus-4-8": {
+      "inputTokens": 2361,
+      "outputTokens": 3165,
+      "cacheReadInputTokens": 34249,
+      "cacheCreationInputTokens": 19864,
+      "webSearchRequests": 0,
+      "costUSD": 0.23220449999999998,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "9790225f-ba84-4345-ac95-5fe135fbe700"
+}

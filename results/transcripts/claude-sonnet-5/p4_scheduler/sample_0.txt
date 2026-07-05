@@ -1,0 +1,129 @@
+```python
+"""
+scheduler.py
+
+A deterministic greedy scheduler for a DAG of tasks on identical workers.
+
+The public entry point is `schedule`.
+"""
+
+from typing import Dict, List, Tuple
+
+
+def schedule(tasks: Dict[str, Tuple[int, List[str]]], workers: int) -> Dict[str, Tuple[int, int]]:
+    """
+    Deterministically schedule `tasks` (a DAG) onto `workers` identical workers.
+
+    tasks: mapping task_id -> (duration, deps)
+        duration: positive int
+        deps: list of task_ids that must finish before this task starts
+
+    workers: number of identical workers (>= 1)
+
+    Returns: mapping task_id -> (start_time, worker_index)
+
+    Raises ValueError if the dependency graph has a cycle or references an
+    unknown task id.
+    """
+    # ---- Validate references ----
+    for tid, (dur, deps) in tasks.items():
+        for d in deps:
+            if d not in tasks:
+                raise ValueError(
+                    f"Task {tid!r} references unknown dependency {d!r}"
+                )
+
+    # ---- Cycle detection (DFS with coloring) ----
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = {t: WHITE for t in tasks}
+
+    def visit(u: str) -> None:
+        color[u] = GRAY
+        for d in tasks[u][1]:
+            if color[d] == GRAY:
+                raise ValueError("Cycle detected in task dependency graph")
+            if color[d] == WHITE:
+                visit(d)
+        color[u] = BLACK
+
+    for u in tasks:
+        if color[u] == WHITE:
+            visit(u)
+
+    total = len(tasks)
+    if total == 0:
+        return {}
+
+    if workers < 1:
+        raise ValueError("workers must be >= 1")
+
+    result: Dict[str, Tuple[int, int]] = {}
+    finish_time: Dict[str, int] = {}
+    finished = set()   # tasks whose finish_time <= current_time
+    started = set()    # tasks assigned but not yet marked finished
+
+    not_ready = set(tasks.keys())
+    ready = set()
+
+    # Initial ready set: tasks with no dependencies
+    for t in tasks:
+        if not tasks[t][1]:
+            ready.add(t)
+            not_ready.discard(t)
+
+    idle_workers = list(range(workers))
+    worker_busy_until: Dict[int, int] = {}
+
+    current_time = 0
+
+    while len(finished) < total:
+        # 1. Free workers whose running task has finished by current_time
+        for w in list(worker_busy_until.keys()):
+            if worker_busy_until[w] <= current_time:
+                del worker_busy_until[w]
+                idle_workers.append(w)
+
+        # 2. Mark tasks as finished if their finish time has passed
+        for t in list(started):
+            if finish_time[t] <= current_time:
+                finished.add(t)
+                started.discard(t)
+
+        # 3. Promote tasks whose dependencies are all finished into ready set
+        changed = True
+        while changed:
+            changed = False
+            for t in list(not_ready):
+                deps = tasks[t][1]
+                if all(d in finished for d in deps):
+                    ready.add(t)
+                    not_ready.discard(t)
+                    changed = True
+
+        # 4. Assign ready tasks to idle workers according to policy
+        while idle_workers and ready:
+            best = min(ready, key=lambda t: (-tasks[t][0], t))
+            w = min(idle_workers)
+            idle_workers.remove(w)
+            ready.discard(best)
+
+            result[best] = (current_time, w)
+            ft = current_time + tasks[best][0]
+            finish_time[best] = ft
+            worker_busy_until[w] = ft
+            started.add(best)
+
+        if len(finished) >= total:
+            break
+
+        # 5. Advance time to the next event (a worker finishing)
+        if worker_busy_until:
+            current_time = min(worker_busy_until.values())
+        else:
+            # No busy workers, but unfinished tasks remain and none are ready.
+            # This should not happen given a valid, acyclic, fully-referenced
+            # dependency graph.
+            raise ValueError("Scheduling deadlock (unexpected internal state)")
+
+    return result
+```

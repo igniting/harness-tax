@@ -1,0 +1,137 @@
+
+
+```python
+def evaluate(expr: str) -> int:
+    tokens = _tokenize(expr)
+    if not tokens:
+        raise ValueError("Empty input")
+    pos, result = _parse_at(tokens, 0)
+    if pos != len(tokens):
+        raise ValueError(f"Unexpected token at position {pos}: {tokens[pos]}")
+    return result
+
+
+def _tokenize(expr: str):
+    tokens = []
+    i = 0
+    while i < len(expr):
+        c = expr[i]
+        if c.isspace():
+            i += 1
+            continue
+        if c.isdigit():
+            j = i
+            while j < len(expr) and expr[j].isdigit():
+                j += 1
+            tokens.append(('NUM', int(expr[i:j])))
+            i = j
+        elif c in '+-*/^@()':
+            tokens.append(('OP', c))
+            i += 1
+        else:
+            raise ValueError(f"Unknown character: {c}")
+    return tokens
+
+
+def _parse_at(tokens, pos):
+    # @ is lowest precedence, left-associative
+    pos, left = _parse_addsub(tokens, pos)
+    while pos < len(tokens) and tokens[pos] == ('OP', '@'):
+        pos += 1  # consume @
+        pos, right = _parse_addsub(tokens, pos)
+        left = (left + right) // 2
+    return pos, left
+
+
+def _parse_addsub(tokens, pos):
+    # +, - binary, left-associative
+    pos, left = _parse_muldiv(tokens, pos)
+    while pos < len(tokens) and tokens[pos][0] == 'OP' and tokens[pos][1] in ('+', '-'):
+        op = tokens[pos][1]
+        pos += 1  # consume operator
+        # After +, -, unary minus is allowed
+        pos, right = _parse_muldiv(tokens, pos)
+        if op == '+':
+            left = left + right
+        else:
+            left = left - right
+    return pos, left
+
+
+def _parse_muldiv(tokens, pos):
+    # *, / left-associative
+    pos, left = _parse_power(tokens, pos)
+    while pos < len(tokens) and tokens[pos][0] == 'OP' and tokens[pos][1] in ('*', '/'):
+        op = tokens[pos][1]
+        pos += 1  # consume operator
+        # After *, /, unary minus is allowed
+        pos, right = _parse_power(tokens, pos)
+        if op == '*':
+            left = left * right
+        else:
+            if right == 0:
+                raise ZeroDivisionError("Division by zero")
+            left = left // right
+    return pos, left
+
+
+def _parse_power(tokens, pos):
+    # ^ right-associative
+    # The base is a unary expression (which handles unary minus and atoms)
+    pos, base = _parse_unary(tokens, pos)
+    if pos < len(tokens) and tokens[pos] == ('OP', '^'):
+        pos += 1  # consume ^
+        # After ^, unary minus is FORBIDDEN
+        # Check if the next token is a unary minus
+        if pos < len(tokens) and tokens[pos] == ('OP', '-'):
+            raise ValueError("Unary minus directly after ^ is forbidden")
+        # Right-associative: parse another power expression
+        # But we can't allow unary minus at the start of the right side
+        # We parse power recursively (right-assoc), but the right operand
+        # should be parsed without allowing leading unary minus
+        pos, exp = _parse_power_no_unary_minus(tokens, pos)
+        if exp < 0:
+            raise ValueError("Negative exponent")
+        base = base ** exp
+    return pos, base
+
+
+def _parse_power_no_unary_minus(tokens, pos):
+    # Parse an atom (no unary minus allowed at top level), then check for ^
+    pos, base = _parse_atom(tokens, pos)
+    if pos < len(tokens) and tokens[pos] == ('OP', '^'):
+        pos += 1  # consume ^
+        if pos < len(tokens) and tokens[pos] == ('OP', '-'):
+            raise ValueError("Unary minus directly after ^ is forbidden")
+        pos, exp = _parse_power_no_unary_minus(tokens, pos)
+        if exp < 0:
+            raise ValueError("Negative exponent")
+        base = base ** exp
+    return pos, base
+
+
+def _parse_unary(tokens, pos):
+    # Unary minus binds tighter than ^
+    # Can have multiple unary minuses
+    if pos < len(tokens) and tokens[pos] == ('OP', '-'):
+        pos += 1  # consume -
+        pos, val = _parse_unary(tokens, pos)
+        return pos, -val
+    return _parse_atom(tokens, pos)
+
+
+def _parse_atom(tokens, pos):
+    if pos >= len(tokens):
+        raise ValueError("Unexpected end of expression")
+    tok = tokens[pos]
+    if tok[0] == 'NUM':
+        return pos + 1, tok[1]
+    if tok == ('OP', '('):
+        pos += 1  # consume (
+        pos, val = _parse_at(tokens, pos)
+        if pos >= len(tokens) or tokens[pos] != ('OP', ')'):
+            raise ValueError("Unbalanced parentheses: missing )")
+        pos += 1  # consume )
+        return pos, val
+    raise ValueError(f"Unexpected token: {tok}")
+```

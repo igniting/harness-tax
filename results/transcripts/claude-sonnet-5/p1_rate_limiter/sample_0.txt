@@ -1,0 +1,82 @@
+```python
+"""
+rate_limiter.py
+
+A sliding-window rate limiter with per-key limits and a global limit,
+using integer millisecond timestamps.
+"""
+
+from collections import deque
+from typing import Dict, Deque, Tuple
+
+
+class RateLimiter:
+    def __init__(self, global_limit: int, window_ms: int) -> None:
+        self.global_limit = global_limit
+        self.window_ms = window_ms
+
+        # Per-key configuration: limit and weight
+        self._limits: Dict[str, int] = {}
+        self._weights: Dict[str, int] = {}
+
+        # Per-key admitted events: deque of (ts, weight)
+        self._events: Dict[str, Deque[Tuple[int, int]]] = {}
+        # Per-key running sum of weights currently in the deque
+        self._key_sums: Dict[str, int] = {}
+
+        # Global admitted events: deque of (ts, weight, key)
+        self._global_events: Deque[Tuple[int, int, str]] = deque()
+        self._global_sum: int = 0
+
+    def set_key_limit(self, key: str, limit: int, weight: int = 1) -> None:
+        self._limits[key] = limit
+        self._weights[key] = weight
+        if key not in self._events:
+            self._events[key] = deque()
+            self._key_sums[key] = 0
+
+    def _evict_expired(self, ts: int) -> None:
+        cutoff = ts - self.window_ms  # events with ts_event <= cutoff are expired
+
+        # Evict from global deque
+        gdq = self._global_events
+        while gdq and gdq[0][0] <= cutoff:
+            old_ts, old_weight, old_key = gdq.popleft()
+            self._global_sum -= old_weight
+
+        # Evict from each key's deque
+        for k, dq in self._events.items():
+            s = self._key_sums[k]
+            while dq and dq[0][0] <= cutoff:
+                old_ts, old_weight = dq.popleft()
+                s -= old_weight
+            self._key_sums[k] = s
+
+    def allow(self, key: str, ts: int) -> bool:
+        if key not in self._limits:
+            return False
+
+        self._evict_expired(ts)
+
+        weight = self._weights[key]
+        limit = self._limits[key]
+
+        key_sum = self._key_sums[key]
+        if key_sum + weight > limit:
+            return False
+        if self._global_sum + weight > self.global_limit:
+            return False
+
+        # Admit
+        self._events[key].append((ts, weight))
+        self._key_sums[key] = key_sum + weight
+
+        self._global_events.append((ts, weight, key))
+        self._global_sum += weight
+
+        return True
+
+    def usage(self, ts: int) -> Dict[str, int]:
+        self._evict_expired(ts)
+        return {k: self._key_sums.get(k, 0) for k in self._limits.keys()}
+```

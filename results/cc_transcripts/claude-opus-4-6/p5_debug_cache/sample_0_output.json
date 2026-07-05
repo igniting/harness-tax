@@ -1,0 +1,50 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 48009,
+  "duration_api_ms": 47674,
+  "ttft_ms": 12696,
+  "ttft_stream_ms": 2821,
+  "time_to_request_ms": 36,
+  "num_turns": 3,
+  "result": "All 6 bugs fixed and verified:\n\n1. **`put` overwrite: `move_to_end(last=False)`** \u2192 `last=True` \u2014 overwrite should make key MRU, not LRU\n2. **`put` expired eviction: `if exp > now`** \u2192 `if exp <= now` \u2014 was deleting non-expired entries instead of expired ones\n3. **`put` LRU eviction: `popitem(last=True)`** \u2192 `popitem(last=False)` \u2014 was evicting MRU instead of LRU\n4. **`get` expiry check: `now > expires_at`** \u2192 `now >= expires_at` \u2014 expiry instant is inclusive per spec\n5. **`get` expired branch: `self._hits += 1`** \u2192 `self._misses += 1` \u2014 expired lookup is a miss\n6. **`get` expired branch: missing deletion** \u2192 added `del self._d[key]` \u2014 expired entries must be removed on access",
+  "stop_reason": "end_turn",
+  "session_id": "0e95f6de-374a-4607-b58b-c0b090857925",
+  "total_cost_usd": 0.15437575,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 9327,
+    "cache_read_input_tokens": 57574,
+    "output_tokens": 2691,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 9327
+    },
+    "inference_geo": "global",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {
+    "claude-opus-4-6": {
+      "inputTokens": 4,
+      "outputTokens": 2691,
+      "cacheReadInputTokens": 57574,
+      "cacheCreationInputTokens": 9327,
+      "webSearchRequests": 0,
+      "costUSD": 0.15437575,
+      "contextWindow": 200000,
+      "maxOutputTokens": 64000
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "3f05b404-5c84-4ef1-ab2c-94e5733aa78f"
+}
