@@ -5,24 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Harness Tax — measuring what agentic harnesses add, and what they cost</title>
 <meta name="description" content="We measure the same models on the same problems through raw API calls and through Claude Code, and report the harness's cost in context and dollars against its effect on pass@1.">
-<link rel="preload" href="fonts/source-serif-4-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="https://cdn.jsdelivr.net/gh/aaaakshat/cm-web-fonts@latest/font/Serif/cmunrm.woff" as="font" type="font/woff" crossorigin>
 <link rel="preload" href="fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{
-  font-family:"Source Serif 4"; font-style:normal; font-weight:400; font-display:swap;
-  src:url("fonts/source-serif-4-latin-400-normal.woff2") format("woff2");
+  font-family:"Computer Modern Serif"; font-style:normal; font-weight:400; font-display:swap;
+  src:url("https://cdn.jsdelivr.net/gh/aaaakshat/cm-web-fonts@latest/font/Serif/cmunrm.woff") format("woff");
 }
 @font-face{
-  font-family:"Source Serif 4"; font-style:italic; font-weight:400; font-display:swap;
-  src:url("fonts/source-serif-4-latin-400-italic.woff2") format("woff2");
+  font-family:"Computer Modern Serif"; font-style:italic; font-weight:400; font-display:swap;
+  src:url("https://cdn.jsdelivr.net/gh/aaaakshat/cm-web-fonts@latest/font/Serif/cmunti.woff") format("woff");
 }
 @font-face{
-  font-family:"Source Serif 4"; font-style:normal; font-weight:500; font-display:swap;
-  src:url("fonts/source-serif-4-latin-500-normal.woff2") format("woff2");
-}
-@font-face{
-  font-family:"Source Serif 4"; font-style:normal; font-weight:600; font-display:swap;
-  src:url("fonts/source-serif-4-latin-600-normal.woff2") format("woff2");
+  font-family:"Computer Modern Serif"; font-style:normal; font-weight:700; font-display:swap;
+  src:url("https://cdn.jsdelivr.net/gh/aaaakshat/cm-web-fonts@latest/font/Serif/cmunbx.woff") format("woff");
 }
 @font-face{
   font-family:"Inter"; font-style:normal; font-weight:400; font-display:swap;
@@ -33,10 +29,10 @@
   src:url("fonts/inter-latin-600-normal.woff2") format("woff2");
 }
 :root{
-  --paper:#f9f6ef; --paper-2:#f1ecdf;
-  --ink:#1f1c17; --ink-2:#5d5850; --muted:#8b8477;
-  --grid:#e5dfd0; --axis:#c9c2b0; --rule:#d9d3c3; --border:rgba(31,28,23,.14);
-  --accent:#a84e26;
+  --paper:#ffffff; --paper-2:#f5f5f5;
+  --ink:#282828; --ink-2:#555555; --muted:#888888;
+  --grid:#e8e8e8; --axis:#cccccc; --rule:#dddddd; --border:rgba(0,0,0,.12);
+  --accent:#c0392b;
   /* model colors (entity-fixed across every chart) */
   --m1:#2a78d6; /* Opus 4-6  blue  */
   --m2:#1baf7a; /* Opus 4-7  aqua  */
@@ -45,26 +41,26 @@
   /* mode ramp (ordered: raw -> single-shot -> agentic), one blue hue */
   --mode1:#6da7ec; --mode2:#256abf; --mode3:#0d366b;
   --good:#006300;
-  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --serif:"Computer Modern Serif","Iowan Old Style",Georgia,"Times New Roman",serif;
   --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --paper:#171511; --paper-2:#22201a;
-    --ink:#ece7db; --ink-2:#b3ac9d; --muted:#8b8477;
-    --grid:#2e2b24; --axis:#413d33; --rule:#3a362c; --border:rgba(236,231,219,.16);
-    --accent:#d98a5e;
-    --m1:#3987e5; --m2:#199e70; --m3:#c98500; --m4:#008300;
-    --mode1:#9ec5f4; --mode2:#3987e5; --mode3:#184f95;
-    --good:#0ca30c;
+    --paper:#1a1a1a; --paper-2:#242424;
+    --ink:#e8e8e8; --ink-2:#aaaaaa; --muted:#888888;
+    --grid:#2e2e2e; --axis:#444444; --rule:#383838; --border:rgba(255,255,255,.14);
+    --accent:#e74c3c;
+    --m1:#5ba3f5; --m2:#2ecc71; --m3:#f1c40f; --m4:#27ae60;
+    --mode1:#85c1e9; --mode2:#3498db; --mode3:#1a5276;
+    --good:#2ecc71;
   }
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
   margin:0; background:var(--paper); color:var(--ink);
-  font:17.5px/1.75 var(--serif);
+  font:17px/1.6 var(--serif);
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
 }
 a{color:inherit; text-decoration:underline; text-decoration-color:var(--rule); text-underline-offset:3px; text-decoration-thickness:1px}
@@ -86,9 +82,22 @@ header.site nav a{
   text-transform:uppercase; color:var(--ink-2); text-decoration:none;
 }
 header.site nav a:hover{color:var(--accent)}
-main{max-width:880px; margin:0 auto; padding:0 24px 96px}
+main{max-width:880px; margin:0 auto; padding:0 24px 96px; position:relative}
 article > *{max-width:660px}
 article > .wide{max-width:none}
+/* floating TOC */
+.toc{
+  position:fixed; top:80px; left:max(16px, calc((100vw - 880px)/2 - 200px));
+  width:160px; font-family:var(--sans); font-size:11.5px; line-height:1.7;
+  display:none;
+}
+.toc a{
+  display:block; padding:3px 0 3px 12px; color:var(--muted);
+  text-decoration:none; border-left:1.5px solid transparent;
+  transition:color .15s, border-color .15s;
+}
+.toc a:hover, .toc a.active{color:var(--ink); border-left-color:var(--accent)}
+@media (min-width:1200px){ .toc{display:block} }
 .hero{padding:72px 0 12px}
 .hero h1{
   font-size:clamp(34px,6vw,52px); line-height:1.12; font-weight:500;
@@ -100,8 +109,8 @@ article > .wide{max-width:none}
   text-transform:uppercase; color:var(--muted);
 }
 .hero .meta a{color:var(--muted)}
-h2{font-size:28px; font-weight:500; line-height:1.25; letter-spacing:-.01em; margin:64px 0 14px}
-h3{font-size:19px; font-weight:600; line-height:1.4; margin:38px 0 8px}
+h2{font-size:26px; font-weight:700; line-height:1.3; letter-spacing:-.01em; margin:56px 0 14px}
+h3{font-size:19px; font-weight:700; line-height:1.4; margin:36px 0 8px}
 p, li{color:var(--ink)}
 li{margin:5px 0}
 .note{color:var(--ink-2); font-size:15.5px}
@@ -129,16 +138,20 @@ figure.chart figcaption .fignum{
 .legend .key{display:inline-flex; align-items:center; gap:7px}
 .swatch{width:10px; height:10px; border-radius:2px; display:inline-block}
 svg.viz{display:block; width:100%; height:auto}
-svg.viz text{font:12px var(--sans); fill:var(--muted)}
+svg.viz text{font:11.5px var(--sans); fill:var(--muted)}
 svg.viz .tick{font-variant-numeric:tabular-nums}
-svg.viz .grid{stroke:var(--grid); stroke-width:1}
-svg.viz .baseline{stroke:var(--axis); stroke-width:1}
-svg.viz .caplabel{fill:var(--ink-2); font-weight:600}
+svg.viz .grid{stroke:var(--grid); stroke-width:.5; stroke-dasharray:3,3}
+svg.viz .baseline{stroke:var(--axis); stroke-width:.75}
+svg.viz .caplabel{fill:var(--ink-2); font-weight:600; font-size:10.5px}
 svg.viz .rowlabel{fill:var(--ink-2)}
-svg.viz .anno{fill:var(--ink-2); font-weight:600}
+svg.viz .anno{fill:var(--ink-2); font-weight:600; font-size:11px}
 .fill-m1{fill:var(--m1)} .fill-m2{fill:var(--m2)} .fill-m3{fill:var(--m3)} .fill-m4{fill:var(--m4)}
 .fill-mode1{fill:var(--mode1)} .fill-mode2{fill:var(--mode2)} .fill-mode3{fill:var(--mode3)}
+.stroke-m1{stroke:var(--m1)} .stroke-m2{stroke:var(--m2)} .stroke-m3{stroke:var(--m3)} .stroke-m4{stroke:var(--m4)}
+.stroke-mode1{stroke:var(--mode1)} .stroke-mode2{stroke:var(--mode2)} .stroke-mode3{stroke:var(--mode3)}
 .ring{stroke:var(--paper); stroke-width:2}
+.dot{stroke:var(--paper); stroke-width:1.5}
+.line{fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
 .hit{fill:transparent; cursor:pointer}
 .tooltip{
   position:absolute; pointer-events:none; z-index:10; display:none;
@@ -210,6 +223,16 @@ footer.site .row a{color:var(--muted)}
 </header>
 
 <main>
+
+<nav class="toc" id="toc">
+  <a href="#intro">Introduction</a>
+  <a href="#design">Benchmark design</a>
+  <a href="#results">Results</a>
+  <a href="#discussion">Discussion</a>
+  <a href="#limitations">Limitations</a>
+  <a href="#reproduce">Reproducing</a>
+</nav>
+
 <article>
 
 <div class="hero">
@@ -271,13 +294,8 @@ footer.site .row a{color:var(--muted)}
 <p>What makes the 28-point jump notable is that the single-shot harness gives the model no new capability. It cannot run tests or observe outputs; the only change is the surrounding frame — the system prompt and the discipline of writing a file rather than composing a chat response. Whatever the mechanism, the frame alone was worth 28 points to this model. In the agentic configuration, where models may write and run scratch tests before committing, every model reaches 100%.</p>
 
 <figure class="chart wide" id="c-pass">
-  <div class="legend">
-    <span class="key"><span class="swatch" style="background:var(--mode1)"></span>Raw API</span>
-    <span class="key"><span class="swatch" style="background:var(--mode2)"></span>Harness single-shot</span>
-    <span class="key"><span class="swatch" style="background:var(--mode3)"></span>Harness agentic</span>
-  </div>
-  <div data-chart="pass"></div>
-  <figcaption><span class="fignum">Figure 1.</span>pass@1 by model and configuration. Raw API is 25 runs per model, harness single-shot 15, agentic 5.</figcaption>
+  <img src="img/fig1_harness_lift.png" alt="Grouped bar chart showing pass@1 by model and configuration. Opus 4-8 jumps from 72% to 100% with the harness." style="width:100%;max-width:720px">
+  <figcaption><span class="fignum">Figure 1.</span>pass@1 by model and configuration. Raw API is 25 runs per model, harness single-shot 15, agentic 5. The +28pp annotation marks the harness lift for Opus 4-8.</figcaption>
   <details class="tv"><summary>Data table</summary>
     <div class="tablewrap"><table>
       <thead><tr><th>Model</th><th>Raw API</th><th>Single-shot</th><th>Agentic</th></tr></thead>
@@ -295,13 +313,8 @@ footer.site .row a{color:var(--muted)}
 <p>The isolated point at 1,037&times; deserves comment. Two of Sonnet 5's three single-shot runs on p3 disregarded the instruction to write the file and stop, continued for thirteen turns, and accumulated as much as 1.02 million context tokens — a $2.94 run for a problem the same model solves raw for five cents.<sup class="fn" id="fnref2"><a href="#fn2">2</a></sup> Both runs passed. This is the tax at its worst: the loop gives the model room to keep going, and the accounting bills every lap.</p>
 
 <figure class="chart wide" id="c-tax">
-  <div class="legend">
-    <span class="key"><span class="swatch" style="background:var(--m1)"></span>Opus 4-6</span>
-    <span class="key"><span class="swatch" style="background:var(--m3)"></span>Opus 4-8</span>
-    <span class="key"><span class="swatch" style="background:var(--m4)"></span>Sonnet 5</span>
-  </div>
-  <div data-chart="tax"></div>
-  <figcaption><span class="fignum">Figure 2.</span>Context overhead of the single-shot harness, per problem: total harness context tokens (input + cache creation + cache read, across all turns) divided by raw-API input tokens. Log scale.</figcaption>
+  <img src="img/fig2_cost.png" alt="Grouped bar chart showing cost per solved problem across configurations." style="width:100%;max-width:720px">
+  <figcaption><span class="fignum">Figure 2.</span>Effective cost per solved problem. Raw API cost is adjusted for pass rate (failed runs are wasted spend). Harness modes achieve 100% so cost/run = cost/solve.</figcaption>
   <details class="tv"><summary>Data table</summary>
     <div class="tablewrap"><table>
       <thead><tr><th>Problem</th><th>Opus 4-6</th><th>Opus 4-8</th><th>Sonnet 5</th></tr></thead>
@@ -319,49 +332,12 @@ footer.site .row a{color:var(--muted)}
 <h3>Cost per run and cost per solve</h3>
 <p>Figure 3 gives the dollar view. Per run, the harness costs five to eight times the raw call.<sup class="fn" id="fnref1b"><a href="#fn1">1</a></sup> Per <em>solved problem</em>, however, the comparison inverts for the model the harness helps. At a 72% pass rate, Opus 4-8's raw lane wastes more than a quarter of its calls, and each failure costs whatever a retry or a human debugging session costs downstream; through the harness, every $0.15 run lands. For Sonnet 5 the same spend purchases nothing — it was already at 100% for a twentieth of the price. In the agentic lane, where Sonnet 5 can satisfy itself by running a test instead of re-deriving everything in context, it becomes the cheapest model measured, at $0.198 per problem.</p>
 
-<figure class="chart wide" id="c-cost">
-  <div class="legend">
-    <span class="key"><span class="swatch" style="background:var(--mode1)"></span>Raw API</span>
-    <span class="key"><span class="swatch" style="background:var(--mode2)"></span>Harness single-shot</span>
-    <span class="key"><span class="swatch" style="background:var(--mode3)"></span>Harness agentic</span>
-  </div>
-  <div data-chart="cost"></div>
-  <figcaption><span class="fignum">Figure 3.</span>Average cost per run, by model and configuration. Raw API is the model's list price on one call; harness cost is Claude Code's reported total. Sonnet 5's single-shot mean carries the two runaway p3 runs; its median single-shot run cost about $0.16.</figcaption>
-  <details class="tv"><summary>Data table</summary>
-    <div class="tablewrap"><table>
-      <thead><tr><th>Model</th><th>Raw API</th><th>Single-shot</th><th>Agentic</th></tr></thead>
-      <tbody>
-        <tr><td>Opus 4-6</td><td>$0.032</td><td>$0.219</td><td>$0.288</td></tr>
-        <tr><td>Opus 4-8</td><td>$0.030</td><td>$0.147</td><td>$0.265</td></tr>
-        <tr><td>Sonnet 5</td><td>$0.048</td><td>$0.394</td><td>$0.198</td></tr>
-      </tbody>
-    </table></div>
-  </details>
-</figure>
-
 <h3>The agentic lane</h3>
-<p>Agentic mode is where the harness earns its keep by a different mechanism: not a better frame, but the ability to check. Every model reached 100%, taking two to ten turns per problem (Figure 4). The ten-turn case — Opus 4-6 on the scheduler, whose tie-breaking rules must be matched exactly — shows the shape of agentic self-repair: write, test, find the tie-break wrong, fix, repeat, at a final cost of $0.44, fourteen times the raw call. On problems of this size, agentic mode is best understood as insurance: two to ten times the single-shot price, in exchange for a correctness guarantee that held across all fifteen runs.</p>
+<p>Agentic mode is where the harness earns its keep by a different mechanism: not a better frame, but the ability to check. Every model reached 100%, taking two to ten turns per problem (Figure 3). The ten-turn case — Opus 4-6 on the scheduler, whose tie-breaking rules must be matched exactly — shows the shape of agentic self-repair: write, test, find the tie-break wrong, fix, repeat, at a final cost of $0.44, fourteen times the raw call. On problems of this size, agentic mode is best understood as insurance: two to ten times the single-shot price, in exchange for a correctness guarantee that held across all fifteen runs.</p>
 
 <figure class="chart wide" id="c-turns">
-  <div class="legend">
-    <span class="key"><span class="swatch" style="background:var(--m1)"></span>Opus 4-6</span>
-    <span class="key"><span class="swatch" style="background:var(--m3)"></span>Opus 4-8</span>
-    <span class="key"><span class="swatch" style="background:var(--m4)"></span>Sonnet 5</span>
-  </div>
-  <div data-chart="turns"></div>
-  <figcaption><span class="fignum">Figure 4.</span>Agentic turns per problem, one sample per cell; every run passed. More turns means more scratch-test iterations.</figcaption>
-  <details class="tv"><summary>Data table</summary>
-    <div class="tablewrap"><table>
-      <thead><tr><th>Problem</th><th>Opus 4-6</th><th>Opus 4-8</th><th>Sonnet 5</th></tr></thead>
-      <tbody>
-        <tr><td>p1_rate_limiter</td><td>5</td><td>3</td><td>4</td></tr>
-        <tr><td>p2_expr_parser</td><td>4</td><td>3</td><td>4</td></tr>
-        <tr><td>p3_recurrence</td><td>2</td><td>4</td><td>3</td></tr>
-        <tr><td>p4_scheduler</td><td>10</td><td>3</td><td>5</td></tr>
-        <tr><td>p5_debug_cache</td><td>3</td><td>3</td><td>4</td></tr>
-      </tbody>
-    </table></div>
-  </details>
+  <img src="img/fig3_turns.png" alt="Horizontal bar chart showing agentic turns per problem. Opus 4-6 takes 10 turns on p4_scheduler." style="width:100%;max-width:720px">
+  <figcaption><span class="fignum">Figure 3.</span>Agentic turns per problem, one sample per cell; every run passed. More turns means more scratch-test iterations. The 10-turn outlier shows Opus 4-6 repeatedly fixing its tie-breaking logic on the scheduler problem.</figcaption>
 </figure>
 
 <h2 id="discussion">Discussion</h2>
@@ -423,223 +399,28 @@ python3 harness/cc_report.py results/cc_results.jsonl results/run1.jsonl</code><
   </div>
 </footer>
 
-<div class="tooltip" id="tt"></div>
-
 <script>
 (function(){
 "use strict";
-var NS = "http://www.w3.org/2000/svg";
-function el(tag, attrs){
-  var n = document.createElementNS(NS, tag);
-  for (var k in attrs) n.setAttribute(k, attrs[k]);
-  return n;
-}
-var tt = document.getElementById("tt");
-function bindTip(node, html){
-  function show(evt){
-    tt.innerHTML = html;
-    tt.style.display = "block";
-    var x = (evt.touches ? evt.touches[0].pageX : evt.pageX) || 0;
-    var y = (evt.touches ? evt.touches[0].pageY : evt.pageY) || 0;
-    if (!x && evt.target && evt.target.getBoundingClientRect){
-      var r = evt.target.getBoundingClientRect();
-      x = r.left + r.width/2 + window.scrollX; y = r.top + window.scrollY;
-    }
-    var w = tt.offsetWidth;
-    var left = Math.min(x + 14, document.documentElement.clientWidth - w - 8);
-    tt.style.left = left + "px";
-    tt.style.top = (y - tt.offsetHeight - 12) + "px";
+// TOC scroll spy
+var tocLinks = document.querySelectorAll('.toc a');
+var sections = [];
+tocLinks.forEach(function(a){
+  var id = a.getAttribute('href').slice(1);
+  var s = document.getElementById(id);
+  if (s) sections.push({el: s, link: a});
+});
+function updateToc(){
+  var scrollY = window.scrollY + 120;
+  var active = sections[0];
+  for (var i = 0; i < sections.length; i++){
+    if (sections[i].el.offsetTop <= scrollY) active = sections[i];
   }
-  function hide(){ tt.style.display = "none"; }
-  node.addEventListener("mousemove", show);
-  node.addEventListener("mouseleave", hide);
-  node.addEventListener("focus", show);
-  node.addEventListener("blur", hide);
-  node.setAttribute("tabindex", "0");
+  tocLinks.forEach(function(a){ a.classList.remove('active'); });
+  if (active) active.link.classList.add('active');
 }
-// rounded-top column: square at baseline, 4px radius at the data end
-function colPath(x, y, w, h){
-  var r = Math.min(4, w/2, h);
-  return "M" + x + "," + (y+h) +
-         " L" + x + "," + (y+r) +
-         " Q" + x + "," + y + " " + (x+r) + "," + y +
-         " L" + (x+w-r) + "," + y +
-         " Q" + (x+w) + "," + y + " " + (x+w) + "," + (y+r) +
-         " L" + (x+w) + "," + (y+h) + " Z";
-}
-
-// ---- generic grouped-column chart ----------------------------------------
-function groupedColumns(mount, cfg){
-  var W = 720, H = cfg.height || 300;
-  var m = {top: 18, right: 12, bottom: 34, left: 46};
-  var iw = W - m.left - m.right, ih = H - m.top - m.bottom;
-  var svg = el("svg", {viewBox: "0 0 " + W + " " + H, "class": "viz",
-                       role: "img", "aria-label": cfg.aria});
-  var yMax = cfg.yMax;
-  function yPix(v){ return m.top + ih * (1 - v / yMax); }
-  cfg.yTicks.forEach(function(t){
-    var y = yPix(t);
-    if (t > 0) svg.appendChild(el("line", {x1:m.left, x2:m.left+iw, y1:y, y2:y, "class":"grid"}));
-    var lab = el("text", {x: m.left-8, y: y+4, "text-anchor":"end", "class":"tick"});
-    lab.textContent = cfg.yFmt(t);
-    svg.appendChild(lab);
-  });
-  var nG = cfg.groups.length, nS = cfg.series.length;
-  var band = iw / nG;
-  var gap = 12; // air between bars in a cluster so cap labels never collide
-  var barW = Math.min(24, (band * 0.62 - gap*(nS-1)) / nS);
-  var clusterW = nS*barW + (nS-1)*gap;
-  var capFmt = cfg.capFmt || cfg.fmt;
-  cfg.groups.forEach(function(g, gi){
-    var cx = m.left + band*gi + band/2;
-    var gl = el("text", {x: cx, y: H-10, "text-anchor":"middle", "class":"rowlabel"});
-    gl.textContent = g;
-    svg.appendChild(gl);
-    cfg.series.forEach(function(s, si){
-      var v = cfg.values[si][gi];
-      if (v == null) return;
-      var h = ih * v / yMax;
-      var x = cx - clusterW/2 + si*(barW+gap);
-      var y = yPix(v);
-      var bar = el("path", {d: colPath(x, y, barW, h), "class": s.cls});
-      svg.appendChild(bar);
-      var hit = el("rect", {x: x - gap/2, y: m.top, width: barW+gap, height: ih, "class":"hit",
-                            "aria-label": g + ", " + s.name + ": " + cfg.fmt(v)});
-      bindTip(hit, "<b>" + g + "</b><br>" + s.name + ": <b>" + cfg.fmt(v) + "</b>" +
-                   (cfg.tipExtra ? cfg.tipExtra(si, gi) : ""));
-      svg.appendChild(hit);
-    });
-    // cap labels: merge runs of equal adjacent values into one centered label
-    if (cfg.capLabel){
-      var si2 = 0;
-      while (si2 < nS){
-        var v0 = cfg.values[si2][gi];
-        var e = si2;
-        while (e+1 < nS && capFmt(cfg.values[e+1][gi]) === capFmt(v0)) e++;
-        if (v0 != null && cfg.capLabel(v0, si2, gi)){
-          var xs = cx - clusterW/2 + si2*(barW+gap);
-          var xe = cx - clusterW/2 + e*(barW+gap) + barW;
-          var t = el("text", {x: (xs+xe)/2, y: yPix(v0)-5, "text-anchor":"middle", "class":"caplabel"});
-          t.textContent = capFmt(v0);
-          svg.appendChild(t);
-        }
-        si2 = e + 1;
-      }
-    }
-  });
-  svg.appendChild(el("line", {x1:m.left, x2:m.left+iw, y1:m.top+ih, y2:m.top+ih, "class":"baseline"}));
-  mount.appendChild(svg);
-}
-
-// ---- log-scale dot plot ----------------------------------------------------
-function dotPlot(mount, cfg){
-  var W = 720, H = 26 + cfg.rows.length*44 + 36;
-  var m = {top: 14, right: 24, bottom: 30, left: 118};
-  var iw = W - m.left - m.right;
-  var lo = Math.log10(cfg.xMin), hi = Math.log10(cfg.xMax);
-  function xPix(v){ return m.left + iw * (Math.log10(v)-lo)/(hi-lo); }
-  var svg = el("svg", {viewBox:"0 0 " + W + " " + H, "class":"viz",
-                       role:"img", "aria-label": cfg.aria});
-  var plotBottom = H - m.bottom;
-  cfg.xTicks.forEach(function(t){
-    var x = xPix(t);
-    svg.appendChild(el("line", {x1:x, x2:x, y1:m.top, y2:plotBottom, "class":"grid"}));
-    var lab = el("text", {x:x, y:H-10, "text-anchor":"middle", "class":"tick"});
-    lab.textContent = t.toLocaleString() + "×";
-    svg.appendChild(lab);
-  });
-  cfg.rows.forEach(function(row, ri){
-    var y = m.top + 22 + ri*44;
-    var rl = el("text", {x: m.left-12, y: y+4, "text-anchor":"end", "class":"rowlabel"});
-    rl.textContent = row;
-    svg.appendChild(rl);
-    svg.appendChild(el("line", {x1:m.left, x2:m.left+iw, y1:y, y2:y, "class":"grid"}));
-    cfg.series.forEach(function(s, si){
-      var v = cfg.values[si][ri];
-      var x = xPix(v);
-      svg.appendChild(el("circle", {cx:x, cy:y, r:5.5, "class": s.cls + " ring"}));
-      var hit = el("circle", {cx:x, cy:y, r:14, "class":"hit",
-                              "aria-label": row + ", " + s.name + ": " + v.toLocaleString() + "×"});
-      bindTip(hit, "<b>" + row + "</b><br>" + s.name + ": <b>" + v.toLocaleString() +
-                   "×</b> raw input tokens");
-      svg.appendChild(hit);
-    });
-  });
-  (cfg.annos || []).forEach(function(a){
-    var t = el("text", {x: xPix(a.x) + a.dx, y: m.top + 22 + a.row*44 + a.dy,
-                        "text-anchor": a.anchor || "middle", "class":"anno"});
-    t.textContent = a.text;
-    svg.appendChild(t);
-  });
-  svg.appendChild(el("line", {x1:m.left, x2:m.left, y1:m.top, y2:plotBottom, "class":"baseline"}));
-  mount.appendChild(svg);
-}
-
-// ---- data ------------------------------------------------------------------
-var MODES = [
-  {name:"Raw API", cls:"fill-mode1"},
-  {name:"Harness single-shot", cls:"fill-mode2"},
-  {name:"Harness agentic", cls:"fill-mode3"}
-];
-var MODELS3 = [
-  {name:"Opus 4-6", cls:"fill-m1"},
-  {name:"Opus 4-8", cls:"fill-m3"},
-  {name:"Sonnet 5", cls:"fill-m4"}
-];
-var PROBLEMS = ["p1_rate_limiter","p2_expr_parser","p3_recurrence","p4_scheduler","p5_debug_cache"];
-
-groupedColumns(document.querySelector('[data-chart="pass"]'), {
-  aria: "Grouped column chart of pass at 1 by model and configuration; agentic mode is 100 percent for all models.",
-  groups: ["Opus 4-6","Opus 4-8","Sonnet 5"],
-  series: MODES,
-  values: [[92,72,100],[93,100,100],[100,100,100]],
-  yMax: 100, yTicks: [0,25,50,75,100],
-  yFmt: function(v){ return v + "%"; },
-  fmt: function(v){ return v + "%"; },
-  capLabel: function(){ return true; },
-  tipExtra: function(si){ return "<br>n = " + [25,15,5][si] + " runs"; }
-});
-
-dotPlot(document.querySelector('[data-chart="tax"]'), {
-  aria: "Dot plot on a log scale of context overhead ratios per problem; most points sit between 38x and 125x, with one Sonnet 5 outlier at 1037x.",
-  rows: PROBLEMS,
-  series: MODELS3,
-  values: [
-    [73,68,113,125,84],
-    [48,48,68,51,38],
-    [76,68,1037,82,59]
-  ],
-  xMin: 30, xMax: 1400, xTicks: [30,100,300,1000],
-  annos: [{x:1037, row:2, dx:-16, dy:4, anchor:"end", text:"1,037× — 13-turn runaway"}]
-});
-
-groupedColumns(document.querySelector('[data-chart="cost"]'), {
-  aria: "Grouped column chart of average cost per run; raw API costs 3 to 5 cents, harness runs 15 to 39 cents.",
-  groups: ["Opus 4-6","Opus 4-8","Sonnet 5"],
-  series: MODES,
-  values: [[0.032,0.030,0.048],[0.219,0.147,0.394],[0.288,0.265,0.198]],
-  yMax: 0.45, yTicks: [0,0.1,0.2,0.3,0.4],
-  yFmt: function(v){ return "$" + v.toFixed(2); },
-  fmt: function(v){ return "$" + v.toFixed(3); },
-  capFmt: function(v){ return "$" + v.toFixed(2); },
-  capLabel: function(){ return true; }
-});
-
-groupedColumns(document.querySelector('[data-chart="turns"]'), {
-  aria: "Grouped column chart of agentic turns per problem; most runs take 2 to 5 turns, Opus 4-6 takes 10 on the scheduler.",
-  groups: ["p1_rate_limiter","p2_expr_parser","p3_recurrence","p4_scheduler","p5_debug_cache"],
-  series: MODELS3,
-  values: [
-    [5,4,2,10,3],
-    [3,3,4,3,3],
-    [4,4,3,5,4]
-  ],
-  yMax: 10, yTicks: [0,2,4,6,8,10],
-  yFmt: function(v){ return String(v); },
-  fmt: function(v){ return String(v); },
-  // label only the extreme; tooltips + table carry the rest
-  capLabel: function(v){ return v >= 10; }
-});
+window.addEventListener('scroll', updateToc, {passive: true});
+updateToc();
 })();
 </script>
 </body>
